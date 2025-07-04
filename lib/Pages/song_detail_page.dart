@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Models/songs.dart';
-import '../services/auth_service.dart';
+import '../Services/auth_service.dart';
 import 'edit_song_page.dart';
 
 class SongDetailPage extends StatelessWidget {

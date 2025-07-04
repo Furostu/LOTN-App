@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
+import '../Services/auth_service.dart';
 
 class PinPage extends StatefulWidget {
   const PinPage({super.key});
@@ -10,7 +10,7 @@ class PinPage extends StatefulWidget {
 }
 
 class _PinPageState extends State<PinPage> {
-  final TextEditingController _pinController = TextEditingController();
+  final _pinController = TextEditingController();
   String? _error;
 
   @override
@@ -18,32 +18,40 @@ class _PinPageState extends State<PinPage> {
     final auth = context.read<AuthService>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Enter Admin PIN")),
+      appBar: AppBar(title: const Text('Enter Admin PIN')),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Text('Please enter your admin PIN:'),
+            const SizedBox(height: 16),
             TextField(
               controller: _pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'PIN',
                 errorText: _error,
+                border: const OutlineInputBorder(),
               ),
-              obscureText: true,
-              keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             ElevatedButton(
-              child: const Text("Unlock"),
               onPressed: () async {
-                final ok = await auth.tryPin(_pinController.text);
-                if (!ok) {
-                  setState(() => _error = "Wrong PIN");
+                final enteredPin = _pinController.text.trim();
+                final success = await auth.login(enteredPin);
+
+                if (success) {
+                  if (context.mounted) Navigator.pop(context); // go back to SongListPage
                 } else {
-                  Navigator.pop(context);
+                  setState(() {
+                    _error = 'Incorrect PIN';
+                  });
                 }
               },
-            )
+              child: const Text('Submit'),
+            ),
           ],
         ),
       ),

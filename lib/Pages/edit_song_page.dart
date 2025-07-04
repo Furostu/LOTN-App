@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Models/songs.dart';
-import '../services/song_repository.dart';
+import '../Services/song_repository.dart';
 
 class EditSongPage extends StatefulWidget {
   final Song song;
