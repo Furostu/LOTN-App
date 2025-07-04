@@ -1,0 +1,2 @@
+D:/Capstone Project/Github/lotn_app/android/app/.cxx/Debug/49g6b3g6/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/Capstone Project/Github/lotn_app/android/app/.cxx/Debug/49g6b3g6/armeabi-v7a/CMakeFiles/rebuild_cache.dir

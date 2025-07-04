@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "590908768684",
+    "project_id": "lotn-commonwealth-app",
+    "storage_bucket": "lotn-commonwealth-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:590908768684:android:dfbe834a6e8fb248497a09",
+        "android_client_info": {
+          "package_name": "com.example.lotn_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLi7TTU0KqHreSzmQC69u2JZw1tglPmZ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
