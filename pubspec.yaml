@@ -1,4 +1,4 @@
-name: lotn_app
+name: lotn_chords_sheets
 description: "A new Flutter project."
 
 publish_to: 'none'
@@ -23,6 +23,7 @@ dev_dependencies:
 
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.6
 
 flutter_icons:
   android: true
@@ -31,8 +32,15 @@ flutter_icons:
 
 
 flutter:
-
   assets:
     - assets/logo.png
-
   uses-material-design: true
+
+flutter_native_splash:
+  color: "#000000"
+  image: assets/logo.png
+  android: true
+  ios: true
+  fullscreen: true
+  android_gravity: center
+
