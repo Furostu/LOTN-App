@@ -3,12 +3,17 @@ import 'package:provider/provider.dart';
 import '../Services/song_repository.dart';
 import '../Services/auth_service.dart';
 import '../Models/songs.dart';
+import '../Widgets/bottom_navbar.dart';
+import '../transition.dart';
+import 'bookmark_page.dart';
 import 'pin_page.dart';
 import 'add_song_page.dart';
 import 'song_detail_page.dart';
 
 class SongListPage extends StatefulWidget {
-  const SongListPage({super.key});
+  final int initialIndex;
+  const SongListPage({super.key, this.initialIndex = 0});
+
 
   @override
   State<SongListPage> createState() => _SongListPageState();
@@ -18,6 +23,7 @@ class _SongListPageState extends State<SongListPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearchFocused = false;
+  int _currentNavIndex = 0; // Add this for bottom navigation
 
   // Selection state for delete functionality
   bool _isSelectionMode = false;
@@ -38,6 +44,7 @@ class _SongListPageState extends State<SongListPage> {
     _searchController.dispose();
     super.dispose();
   }
+
 
   List<Song> _filterSongs(List<Song> songs) {
     if (_searchQuery.isEmpty) return songs;
@@ -66,158 +73,82 @@ class _SongListPageState extends State<SongListPage> {
     });
   }
 
-  void _showDeleteConfirmDialog(BuildContext context, SongRepository repo) {
+  // Add this method to handle bottom navigation
+  void _onNavItemTapped(int index) {
+    setState(() {
+      _currentNavIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+
+        break;
+      case 1:
+      // Bookmarks tab – navigate to BookmarkPage
+        Navigator.push(
+          context,
+          FadePageRoute(builder: (_) => const BookmarkPage()),
+        );
+        break;
+    }
+  }
+
+  // Add these methods for logout and delete confirmation dialogs
+  void _showLogoutDialog(BuildContext context, AuthService auth) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Delete Songs',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 20,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Are you sure you want to delete ${_selectedSongs.length} ${_selectedSongs.length == 1 ? 'song' : 'songs'}? This action cannot be undone.',
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 15,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black12),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.black54,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextButton(
-                          onPressed: () async {
-                            Navigator.of(context).pop();
-                            await _deleteSongs(repo);
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text(
-                            'Delete',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout from admin mode?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
-          ),
+            TextButton(
+              onPressed: () {
+                auth.logout();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Logout'),
+            ),
+          ],
         );
       },
     );
   }
 
-  Future<void> _deleteSongs(SongRepository repo) async {
-    try {
-      // Delete all selected songs
-      for (String songId in _selectedSongs) {
-        await repo.deleteSong(songId);
-      }
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully deleted ${_selectedSongs.length} ${_selectedSongs.length == 1 ? 'song' : 'songs'}'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+  void _showDeleteConfirmDialog(BuildContext context, SongRepository repo) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Songs'),
+          content: Text('Are you sure you want to delete ${_selectedSongs.length} song(s)?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
-          ),
-        );
-      }
-
-      // Reset selection state
-      setState(() {
-        _selectedSongs.clear();
-        _isSelectionMode = false;
-      });
-    } catch (e) {
-      // Show error message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting songs: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            TextButton(
+              onPressed: () async {
+                for (String songId in _selectedSongs) {
+                  await repo.deleteSong(songId);
+                }
+                _toggleSelectionMode();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Delete'),
             ),
-          ),
+          ],
         );
-      }
-    }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    print("📄 Building SongListPage");
-
     final repo = context.watch<SongRepository>();
     final auth = context.watch<AuthService>();
 
@@ -416,7 +347,7 @@ class _SongListPageState extends State<SongListPage> {
                             case 'login':
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                FadePageRoute(
                                   builder: (context) => const PinPage(),
                                 ),
                               );
@@ -427,7 +358,7 @@ class _SongListPageState extends State<SongListPage> {
                             case 'add_song':
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const AddSongPage()),
+                                FadePageRoute(builder: (_) => const AddSongPage()),
                               );
                               break;
                             case 'delete_songs':
@@ -785,139 +716,142 @@ class _SongListPageState extends State<SongListPage> {
                         ),
                       // Songs list
                       Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          itemCount: filteredSongs.length,
-                          itemBuilder: (context, index) {
-                            final song = filteredSongs[index];
-                            final isSelected = _selectedSongs.contains(song.id);
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 20), // Add bottom padding for navbar
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            itemCount: filteredSongs.length,
+                            itemBuilder: (context, index) {
+                              final song = filteredSongs[index];
+                              final isSelected = _selectedSongs.contains(song.id);
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected ? Colors.red : Colors.black12,
-                                  width: isSelected ? 2 : 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 4),
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12), // Reduced from 16 to 12
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16), // Reduced from 20 to 16
+                                  border: Border.all(
+                                    color: isSelected ? Colors.red : Colors.black12,
+                                    width: isSelected ? 2 : 1,
                                   ),
-                                ],
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(20),
-                                  onTap: () {
-                                    if (_isSelectionMode && auth.isAdmin) {
-                                      _toggleSongSelection(song.id);
-                                    } else {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => SongDetailPage(song: song),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  onLongPress: auth.isAdmin ? () {
-                                    if (!_isSelectionMode) {
-                                      setState(() {
-                                        _isSelectionMode = true;
-                                        _selectedSongs.add(song.id);
-                                      });
-                                    }
-                                  } : null,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Row(
-                                      children: [
-                                        // Selection indicator or music icon
-                                        if (_isSelectionMode && auth.isAdmin)
-                                          Container(
-                                            width: 60,
-                                            height: 60,
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? Colors.red : Colors.grey.shade200,
-                                              borderRadius: BorderRadius.circular(18),
-                                              border: Border.all(
-                                                color: isSelected ? Colors.red : Colors.grey.shade300,
-                                                width: 2,
-                                              ),
-                                            ),
-                                            child: Icon(
-                                              isSelected ? Icons.check : Icons.music_note,
-                                              color: isSelected ? Colors.white : Colors.grey.shade600,
-                                              size: 30,
-                                            ),
-                                          )
-                                        else
-                                          Container(
-                                            width: 60,
-                                            height: 60,
-                                            decoration: BoxDecoration(
-                                              color: Colors.black,
-                                              borderRadius: BorderRadius.circular(18),
-                                            ),
-                                            child: const Icon(
-                                              Icons.music_note,
-                                              color: Colors.white,
-                                              size: 30,
-                                            ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.06), // Reduced shadow opacity
+                                      blurRadius: 12, // Reduced from 16 to 12
+                                      offset: const Offset(0, 3), // Reduced from 4 to 3
+                                    ),
+                                  ],
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: () {
+                                      if (_isSelectionMode && auth.isAdmin) {
+                                        _toggleSongSelection(song.id);
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          FadePageRoute(
+                                            builder: (_) => SongDetailPage(song: song),
                                           ),
-                                        const SizedBox(width: 20),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                song.title,
-                                                style: const TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w600,
-                                                  letterSpacing: -0.3,
+                                        );
+                                      }
+                                    },
+                                    onLongPress: auth.isAdmin ? () {
+                                      if (!_isSelectionMode) {
+                                        setState(() {
+                                          _isSelectionMode = true;
+                                          _selectedSongs.add(song.id);
+                                        });
+                                      }
+                                    } : null,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(18), // Reduced from 24 to 18
+                                      child: Row(
+                                        children: [
+                                          // Selection indicator or music icon
+                                          if (_isSelectionMode && auth.isAdmin)
+                                            Container(
+                                              width: 48, // Reduced from 60 to 48
+                                              height: 48, // Reduced from 60 to 48
+                                              decoration: BoxDecoration(
+                                                color: isSelected ? Colors.red : Colors.grey.shade200,
+                                                borderRadius: BorderRadius.circular(14), // Reduced from 18 to 14
+                                                border: Border.all(
+                                                  color: isSelected ? Colors.red : Colors.grey.shade300,
+                                                  width: 2,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                _isSelectionMode && auth.isAdmin
-                                                    ? 'Tap to select/deselect'
-                                                    : 'Tap to view chords',
-                                                style: const TextStyle(
-                                                  color: Colors.black54,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w400,
-                                                ),
+                                              child: Icon(
+                                                isSelected ? Icons.check : Icons.music_note,
+                                                color: isSelected ? Colors.white : Colors.grey.shade600,
+                                                size: 24, // Reduced from 30 to 24
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                        if (!_isSelectionMode)
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: Colors.black,
-                                              borderRadius: BorderRadius.circular(12),
+                                            )
+                                          else
+                                            Container(
+                                              width: 48, // Reduced from 60 to 48
+                                              height: 48, // Reduced from 60 to 48
+                                              decoration: BoxDecoration(
+                                                color: Colors.black,
+                                                borderRadius: BorderRadius.circular(14), // Reduced from 18 to 14
+                                              ),
+                                              child: const Icon(
+                                                Icons.music_note,
+                                                color: Colors.white,
+                                                size: 24, // Reduced from 30 to 24
+                                              ),
                                             ),
-                                            child: const Icon(
-                                              Icons.chevron_right,
-                                              color: Colors.white,
-                                              size: 20,
+                                          const SizedBox(width: 16), // Reduced from 20 to 16
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  song.title,
+                                                  style: const TextStyle(
+                                                    color: Colors.black,
+                                                    fontSize: 16, // Reduced from 18 to 16
+                                                    fontWeight: FontWeight.w600,
+                                                    letterSpacing: -0.3,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 3), // Reduced from 4 to 3
+                                                Text(
+                                                  _isSelectionMode && auth.isAdmin
+                                                      ? 'Tap to select/deselect'
+                                                      : 'Tap to view chords',
+                                                  style: const TextStyle(
+                                                    color: Colors.black54,
+                                                    fontSize: 13, // Reduced from 14 to 13
+                                                    fontWeight: FontWeight.w400,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                      ],
+                                          if (!_isSelectionMode)
+                                            Container(
+                                              padding: const EdgeInsets.all(7), // Reduced from 8 to 7
+                                              decoration: BoxDecoration(
+                                                color: Colors.black,
+                                                borderRadius: BorderRadius.circular(10), // Reduced from 12 to 10
+                                              ),
+                                              child: const Icon(
+                                                Icons.chevron_right,
+                                                color: Colors.white,
+                                                size: 18, // Reduced from 20 to 18
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -928,111 +862,11 @@ class _SongListPageState extends State<SongListPage> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context, AuthService auth) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.logout,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Logout Admin',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 20,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Are you sure you want to logout from admin mode?',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 15,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black12),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.black54,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            auth.logout();
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text(
-                            'Logout',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      // Add the bottom navigation bar
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: _currentNavIndex,
+        onTap: _onNavItemTapped,
+      ),
     );
   }
 }
