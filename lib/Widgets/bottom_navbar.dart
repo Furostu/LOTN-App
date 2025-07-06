@@ -37,9 +37,15 @@ class CustomBottomNavBar extends StatelessWidget {
           ),
           _buildNavItem(
             index: 1,
-            icon: Icons.bookmark,
-            label: 'Bookmarks',
+            icon: Icons.album,
+            label: 'Albums',
             isActive: currentIndex == 1,
+          ),
+          _buildNavItem(
+            index: 2,
+            icon: Icons.bookmark,
+            label: 'Saved',
+            isActive: currentIndex == 2,
           ),
         ],
       ),
@@ -53,41 +59,31 @@ class CustomBottomNavBar extends StatelessWidget {
     required bool isActive,
   }) {
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => onTap(index),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isActive ? Colors.black : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: isActive ? Colors.white : Colors.black54,
-                  size: 22,
-                ),
-                if (isActive) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: isActive ? Colors.white : Colors.black54,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.2,
-                    ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => onTap(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? Colors.black : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: isActive ? Colors.white : Colors.black54, size: 22),
+              if (isActive) ...[
+                const SizedBox(width: 8),
+                Text(label,
+                  style: TextStyle(
+                    color: isActive ? Colors.white : Colors.black54,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

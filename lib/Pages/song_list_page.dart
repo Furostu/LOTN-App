@@ -5,6 +5,7 @@ import '../Services/auth_service.dart';
 import '../Models/songs.dart';
 import '../Widgets/bottom_navbar.dart';
 import '../transition.dart';
+import 'album_page.dart';
 import 'bookmark_page.dart';
 import 'pin_page.dart';
 import 'add_song_page.dart';
@@ -13,7 +14,6 @@ import 'song_detail_page.dart';
 class SongListPage extends StatefulWidget {
   final int initialIndex;
   const SongListPage({super.key, this.initialIndex = 0});
-
 
   @override
   State<SongListPage> createState() => _SongListPageState();
@@ -44,7 +44,6 @@ class _SongListPageState extends State<SongListPage> {
     _searchController.dispose();
     super.dispose();
   }
-
 
   List<Song> _filterSongs(List<Song> songs) {
     if (_searchQuery.isEmpty) return songs;
@@ -81,10 +80,14 @@ class _SongListPageState extends State<SongListPage> {
 
     switch (index) {
       case 0:
-
         break;
       case 1:
-      // Bookmarks tab – navigate to BookmarkPage
+        Navigator.push(
+          context,
+          FadePageRoute(builder: (_) => const AlbumsPage()),
+        );
+        break;
+      case 2:
         Navigator.push(
           context,
           FadePageRoute(builder: (_) => const BookmarkPage()),
@@ -119,31 +122,39 @@ class _SongListPageState extends State<SongListPage> {
     );
   }
 
+  // Updated delete confirmation dialog with custom styling
   void _showDeleteConfirmDialog(BuildContext context, SongRepository repo) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Songs'),
-          content: Text('Are you sure you want to delete ${_selectedSongs.length} song(s)?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black.withOpacity(0.6),
+        barrierDismissible: false,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return CustomSongDeleteDialog(  // This class needs to be created
+            selectedCount: _selectedSongs.length,
+            onDelete: () async {
+              for (String songId in _selectedSongs) {
+                await repo.deleteSong(songId);
+              }
+              _toggleSelectionMode();
+              Navigator.of(context).pop();
+            },
+            onCancel: () => Navigator.of(context).pop(),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.7, end: 1.0).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+              ),
+              child: child,
             ),
-            TextButton(
-              onPressed: () async {
-                for (String songId in _selectedSongs) {
-                  await repo.deleteSong(songId);
-                }
-                _toggleSelectionMode();
-                Navigator.of(context).pop();
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -320,7 +331,7 @@ class _SongListPageState extends State<SongListPage> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: Colors.red,
+                                      color: Colors.black,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Icon(
@@ -333,7 +344,7 @@ class _SongListPageState extends State<SongListPage> {
                                   const Text(
                                     'Delete Songs',
                                     style: TextStyle(
-                                      color: Colors.red,
+                                      color: Colors.black,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -452,15 +463,15 @@ class _SongListPageState extends State<SongListPage> {
                 margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: Colors.black12,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.red.shade200),
+                  border: Border.all(color: Colors.black12),
                 ),
                 child: Row(
                   children: [
                     const Icon(
                       Icons.delete,
-                      color: Colors.red,
+                      color: Colors.black,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -470,7 +481,7 @@ class _SongListPageState extends State<SongListPage> {
                             ? 'Select songs to delete'
                             : '${_selectedSongs.length} ${_selectedSongs.length == 1 ? 'song' : 'songs'} selected',
                         style: const TextStyle(
-                          color: Colors.red,
+                          color: Colors.black,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -479,7 +490,7 @@ class _SongListPageState extends State<SongListPage> {
                     if (_selectedSongs.isNotEmpty)
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color: Colors.black,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: TextButton(
@@ -731,7 +742,7 @@ class _SongListPageState extends State<SongListPage> {
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16), // Reduced from 20 to 16
                                   border: Border.all(
-                                    color: isSelected ? Colors.red : Colors.black12,
+                                    color: isSelected ? Colors.black : Colors.black12,
                                     width: isSelected ? 2 : 1,
                                   ),
                                   boxShadow: [
@@ -758,14 +769,16 @@ class _SongListPageState extends State<SongListPage> {
                                         );
                                       }
                                     },
-                                    onLongPress: auth.isAdmin ? () {
+                                    onLongPress: auth.isAdmin
+                                        ? () {
                                       if (!_isSelectionMode) {
                                         setState(() {
                                           _isSelectionMode = true;
                                           _selectedSongs.add(song.id);
                                         });
                                       }
-                                    } : null,
+                                    }
+                                        : null,
                                     child: Padding(
                                       padding: const EdgeInsets.all(18), // Reduced from 24 to 18
                                       child: Row(
@@ -776,10 +789,10 @@ class _SongListPageState extends State<SongListPage> {
                                               width: 48, // Reduced from 60 to 48
                                               height: 48, // Reduced from 60 to 48
                                               decoration: BoxDecoration(
-                                                color: isSelected ? Colors.red : Colors.grey.shade200,
+                                                color: isSelected ? Colors.black : Colors.grey.shade200,
                                                 borderRadius: BorderRadius.circular(14), // Reduced from 18 to 14
                                                 border: Border.all(
-                                                  color: isSelected ? Colors.red : Colors.grey.shade300,
+                                                  color: isSelected ? Colors.black : Colors.grey.shade300,
                                                   width: 2,
                                                 ),
                                               ),
@@ -809,10 +822,10 @@ class _SongListPageState extends State<SongListPage> {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  song.title,
+                                                  '${song.title}  –  ${song.creator}',
                                                   style: const TextStyle(
                                                     color: Colors.black,
-                                                    fontSize: 16, // Reduced from 18 to 16
+                                                    fontSize: 16,
                                                     fontWeight: FontWeight.w600,
                                                     letterSpacing: -0.3,
                                                   ),
@@ -866,6 +879,159 @@ class _SongListPageState extends State<SongListPage> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentNavIndex,
         onTap: _onNavItemTapped,
+      ),
+    );
+  }
+}
+
+class CustomSongDeleteDialog extends StatelessWidget {
+  final int selectedCount;
+  final VoidCallback onDelete;
+  final VoidCallback onCancel;
+
+  const CustomSongDeleteDialog({
+    super.key,
+    required this.selectedCount,
+    required this.onDelete,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 40,
+                offset: const Offset(0, 20),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Warning Icon
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.white,
+                  size: 42,
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Title
+              const Text(
+                'Delete Songs?',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                  letterSpacing: -0.8,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Song count highlight
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.black12),
+                ),
+                child: Text(
+                  '$selectedCount ${selectedCount == 1 ? 'song' : 'songs'} selected',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Message
+              const Text(
+                'This action cannot be undone. The selected songs will be permanently removed from the collection.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                  height: 1.5,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(height: 36),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: onCancel,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.black12, width: 2),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: onDelete,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Text(
+                          'Delete',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

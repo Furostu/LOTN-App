@@ -6,6 +6,7 @@ class Song {
   final Map<String, String> chords;
   final String lyrics;
   final List<String> sectionOrder;
+  final String creator; // ✅ Added creator field
 
   Song({
     required this.id,
@@ -13,6 +14,7 @@ class Song {
     required this.chords,
     required this.lyrics,
     required this.sectionOrder,
+    required this.creator, // ✅ Include in constructor
   });
 
   factory Song.fromFirestore(DocumentSnapshot doc) {
@@ -22,7 +24,10 @@ class Song {
       title: data['title'] ?? '',
       chords: Map<String, String>.from(data['chords'] ?? {}),
       lyrics: data['lyrics'] ?? '',
-      sectionOrder: List<String>.from(data['sectionOrder'] ?? (data['chords'] ?? {}).keys),
+      sectionOrder: List<String>.from(
+        data['sectionOrder'] ?? (data['chords'] ?? {}).keys,
+      ),
+      creator: data['creator'] ?? '', // ✅ Handle creator from Firestore
     );
   }
 
@@ -32,6 +37,7 @@ class Song {
       'chords': chords,
       'lyrics': lyrics,
       'sectionOrder': sectionOrder,
+      'creator': creator, // ✅ Save creator to Firestore
     };
   }
 }

@@ -13,6 +13,7 @@ class AddSongPage extends StatefulWidget {
 class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin {
   final _title = TextEditingController();
   final _lyrics = TextEditingController();
+  final _creator = TextEditingController(); // Added creator controller
   final Map<String, TextEditingController> _chordSections = {};
   final List<String> _sectionOrder = [];
   late AnimationController _animationController;
@@ -27,7 +28,6 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
     'Outro',
   ];
 
-  // Predefined section options for the dialog
   final List<String> predefinedSections = [
     'Verse',
     'Verse 2',
@@ -100,8 +100,6 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Predefined sections
               const Text(
                 'Choose from common sections:',
                 style: TextStyle(
@@ -111,8 +109,6 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Scrollable list of predefined sections
               Container(
                 height: 200,
                 decoration: BoxDecoration(
@@ -133,7 +129,9 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          onTap: isAlreadyAdded ? null : () {
+                          onTap: isAlreadyAdded
+                              ? null
+                              : () {
                             setState(() {
                               _chordSections[section] = TextEditingController();
                               _sectionOrder.add(section);
@@ -141,19 +139,12 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                             Navigator.pop(context);
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
-                              color: isAlreadyAdded
-                                  ? Colors.grey[200]
-                                  : Colors.white,
+                              color: isAlreadyAdded ? Colors.grey[200] : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isAlreadyAdded
-                                    ? Colors.grey[300]!
-                                    : Colors.grey[200]!,
+                                color: isAlreadyAdded ? Colors.grey[300]! : Colors.grey[200]!,
                               ),
                             ),
                             child: Row(
@@ -162,20 +153,14 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                                   child: Text(
                                     section,
                                     style: TextStyle(
-                                      color: isAlreadyAdded
-                                          ? Colors.grey[500]
-                                          : Colors.black,
+                                      color: isAlreadyAdded ? Colors.grey[500] : Colors.black,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
                                 if (isAlreadyAdded)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: Colors.grey[400],
-                                    size: 20,
-                                  ),
+                                  Icon(Icons.check_circle, color: Colors.grey[400], size: 20),
                               ],
                             ),
                           ),
@@ -185,10 +170,7 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                   },
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Custom section input
               const Text(
                 'Or create a custom section:',
                 style: TextStyle(
@@ -198,7 +180,6 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                 ),
               ),
               const SizedBox(height: 12),
-
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
@@ -224,70 +205,34 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
               Row(
                 children: [
                   Expanded(
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[600],
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey[600],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                    child: TextButton(
+                      onPressed: () {
+                        final name = controller.text.trim();
+                        if (name.isNotEmpty && !_chordSections.containsKey(name)) {
+                          setState(() {
+                            _chordSections[name] = TextEditingController();
+                            _sectionOrder.add(name);
+                          });
+                        }
+                        Navigator.pop(context);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: TextButton(
-                        onPressed: () {
-                          final name = controller.text.trim();
-                          if (name.isNotEmpty && !_chordSections.containsKey(name)) {
-                            setState(() {
-                              _chordSections[name] = TextEditingController();
-                              _sectionOrder.add(name);
-                            });
-                          }
-                          Navigator.pop(context);
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          'Add Custom',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      child: const Text('Add Custom', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],
@@ -317,7 +262,6 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
         child: SafeArea(
           child: Column(
             children: [
-              // Modern Header
               Container(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                 child: Row(
@@ -331,11 +275,7 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(22),
                         ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.black,
-                          size: 20,
-                        ),
+                        child: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -353,28 +293,23 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                   ],
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // Main Content
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title Section
                       _buildSectionHeader('Song Title'),
                       const SizedBox(height: 12),
-                      _buildModernTextField(
-                        controller: _title,
-                        hintText: 'Enter song title',
-                        maxLines: 1,
-                      ),
+                      _buildModernTextField(controller: _title, hintText: 'Enter song title', maxLines: 1),
+
+                      const SizedBox(height: 20),
+                      _buildSectionHeader('Creator'), // New Creator Field
+                      const SizedBox(height: 12),
+                      _buildModernTextField(controller: _creator, hintText: 'Enter creator name', maxLines: 1),
 
                       const SizedBox(height: 40),
-
-                      // Chord Sections
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -388,30 +323,17 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                                 color: Colors.black,
                                 borderRadius: BorderRadius.circular(22),
                                 boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
-                                  ),
+                                  BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.add,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                              child: const Icon(Icons.add, color: Colors.white, size: 20),
                             ),
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 20),
-
-                      // Chord Sections List
-                      ...List.generate(_sectionOrder.length, (index) {
-                        final section = _sectionOrder[index];
+                      ..._sectionOrder.map((section) {
                         final controller = _chordSections[section]!;
-
                         return Container(
                           margin: const EdgeInsets.only(bottom: 24),
                           padding: const EdgeInsets.all(24),
@@ -426,15 +348,12 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    section,
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -0.3,
-                                    ),
-                                  ),
+                                  Text(section,
+                                      style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.3)),
                                   GestureDetector(
                                     onTap: () => _removeSection(section),
                                     child: Container(
@@ -445,11 +364,7 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(color: Colors.grey[300]!),
                                       ),
-                                      child: Icon(
-                                        Icons.close,
-                                        color: Colors.grey[600],
-                                        size: 16,
-                                      ),
+                                      child: Icon(Icons.close, color: Colors.grey[600], size: 16),
                                     ),
                                   ),
                                 ],
@@ -485,33 +400,18 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                       }),
 
                       const SizedBox(height: 20),
-
-                      // Lyrics Section
                       _buildSectionHeader('Lyrics'),
                       const SizedBox(height: 12),
-                      _buildModernTextField(
-                        controller: _lyrics,
-                        hintText: 'Enter song lyrics...',
-                        maxLines: null,
-                        minLines: 8,
-                      ),
+                      _buildModernTextField(controller: _lyrics, hintText: 'Enter song lyrics...', maxLines: null, minLines: 8),
 
                       const SizedBox(height: 40),
-
-                      // Save Button
                       Container(
                         width: double.infinity,
                         height: 60,
                         decoration: BoxDecoration(
                           color: Colors.black,
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 30, offset: const Offset(0, 15))],
                         ),
                         child: TextButton(
                           onPressed: () async {
@@ -527,15 +427,14 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                               chords: chords,
                               sectionOrder: _sectionOrder,
                               lyrics: _lyrics.text.trim(),
+                              creator: _creator.text.trim(), // Save creator here
                             );
 
                             await repo.addSong(song);
                             if (context.mounted) Navigator.pop(context);
                           },
                           style: TextButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
                           child: const Text(
                             'Save Song',
@@ -548,7 +447,6 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 40),
                     ],
                   ),

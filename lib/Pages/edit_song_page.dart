@@ -14,6 +14,7 @@ class EditSongPage extends StatefulWidget {
 class _EditSongPageState extends State<EditSongPage> {
   late final TextEditingController _title;
   late final TextEditingController _lyrics;
+  late final TextEditingController _creator; // ✅ New field
 
   final Map<String, TextEditingController> _chordSections = {};
   final List<String> _sectionOrder = [];
@@ -34,17 +35,16 @@ class _EditSongPageState extends State<EditSongPage> {
     super.initState();
     _title = TextEditingController(text: widget.song.title);
     _lyrics = TextEditingController(text: widget.song.lyrics);
+    _creator = TextEditingController(text: widget.song.creator); // ✅ Init
 
     final chordsMap = widget.song.chords;
     final order = widget.song.sectionOrder;
 
-    // Load saved chords and order
     for (final section in order) {
       _chordSections[section] = TextEditingController(text: chordsMap[section] ?? '');
       _sectionOrder.add(section);
     }
 
-    // Add missing sections
     for (final section in defaultSections) {
       if (!_chordSections.containsKey(section)) {
         _chordSections[section] = TextEditingController();
@@ -106,6 +106,11 @@ class _EditSongPageState extends State<EditSongPage> {
                 decoration: const InputDecoration(labelText: 'Title'),
               ),
               const SizedBox(height: 16),
+              TextField(
+                controller: _creator,
+                decoration: const InputDecoration(labelText: 'Creator'), // ✅ Added creator input
+              ),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -118,7 +123,6 @@ class _EditSongPageState extends State<EditSongPage> {
                 ],
               ),
               const SizedBox(height: 8),
-              // Fixed height so ReorderableListView doesn't overflow
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 400),
                 child: ReorderableListView.builder(
@@ -179,6 +183,7 @@ class _EditSongPageState extends State<EditSongPage> {
                       chords: chords,
                       sectionOrder: _sectionOrder,
                       lyrics: _lyrics.text.trim(),
+                      creator: _creator.text.trim(), // ✅ Save updated creator
                     );
 
                     await repo.updateSong(updated);

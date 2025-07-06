@@ -234,13 +234,14 @@ class _SongDetailPageState extends State<SongDetailPage> {
                   // Title
                   Expanded(
                     child: Text(
-                      widget.song.title,
+                      '${widget.song.title}  –  ${widget.song.creator}',
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.5,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
 

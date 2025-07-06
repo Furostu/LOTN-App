@@ -7,6 +7,7 @@ import '../Services/auth_service.dart';
 import '../Models/songs.dart';
 import '../Widgets/bottom_navbar.dart';
 import '../transition.dart';
+import 'album_page.dart';
 import 'song_detail_page.dart';
 
 class BookmarkPage extends StatefulWidget {
@@ -20,7 +21,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearchFocused = false;
-  int _currentNavIndex = 1; // Set to 1 for bookmarks tab
+  int _currentNavIndex = 2; // Set to 1 for bookmarks tab
   List<String> _bookmarkedSongIds = [];
   bool _isLoading = true;
 
@@ -82,7 +83,13 @@ class _BookmarkPageState extends State<BookmarkPage> {
         );
         break;
       case 1:
-      // Bookmarks tab - already on this page
+        Navigator.push(
+          context,
+          FadePageRoute(builder: (_) => const AlbumsPage()),
+        );
+        break;
+      case 2:
+
         break;
     }
   }

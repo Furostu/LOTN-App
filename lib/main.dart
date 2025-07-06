@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'Services/auth_service.dart';
 import 'Services/song_repository.dart';
+import 'Services/album_repository.dart';      // ← new import
 import 'Pages/song_list_page.dart';
 
 Future<void> main() async {
@@ -20,8 +21,6 @@ Future<void> main() async {
 
   final authService = AuthService();
 
-  print("▶️ Starting MyApp with providers");
-
   runApp(MyApp(authService: authService));
 }
 
@@ -31,12 +30,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print("🏠 Building MyApp");
-
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider(create: (_) => SongRepository()),
+        Provider<AlbumRepository>(             // ← use plain Provider
+          create: (_) => AlbumRepository(),
+          lazy: false,                        // optional: initialize immediately
+        ),
       ],
       child: MaterialApp(
         title: 'Chord Sheet App',

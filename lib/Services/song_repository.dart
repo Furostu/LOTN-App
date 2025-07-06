@@ -13,6 +13,17 @@ class SongRepository extends ChangeNotifier {
     });
   }
 
+  // Add this method for getting all songs
+  Future<List<Song>> getAllSongs() async {
+    try {
+      final QuerySnapshot snapshot = await _songs.orderBy('title').get();
+      return snapshot.docs.map((doc) => Song.fromFirestore(doc)).toList();
+    } catch (e) {
+      print('Error getting all songs: $e');
+      return [];
+    }
+  }
+
   Future<void> addSong(Song song) async {
     await _songs.add(song.toMap());
   }
