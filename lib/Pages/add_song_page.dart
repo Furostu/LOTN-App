@@ -13,11 +13,17 @@ class AddSongPage extends StatefulWidget {
 class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin {
   final _title = TextEditingController();
   final _lyrics = TextEditingController();
-  final _creator = TextEditingController(); // Added creator controller
+  final _creator = TextEditingController();
   final Map<String, TextEditingController> _chordSections = {};
   final List<String> _sectionOrder = [];
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+  // New state variables for dropdowns
+  String _selectedLanguage = 'English';
+  String _selectedType = 'Fast Song';
+  final List<String> _languageOptions = ['English', 'Tagalog'];
+  final List<String> _typeOptions = ['Fast Song', 'Slow Song'];
 
   final List<String> defaultSections = [
     'Intro',
@@ -305,9 +311,37 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                       _buildModernTextField(controller: _title, hintText: 'Enter song title', maxLines: 1),
 
                       const SizedBox(height: 20),
-                      _buildSectionHeader('Creator'), // New Creator Field
+                      _buildSectionHeader('Creator'),
                       const SizedBox(height: 12),
                       _buildModernTextField(controller: _creator, hintText: 'Enter creator name', maxLines: 1),
+
+                      // Language Dropdown
+                      const SizedBox(height: 20),
+                      _buildSectionHeader('Language'),
+                      const SizedBox(height: 12),
+                      _buildDropdown(
+                        value: _selectedLanguage,
+                        options: _languageOptions,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedLanguage = value!;
+                          });
+                        },
+                      ),
+
+                      // Type Dropdown
+                      const SizedBox(height: 20),
+                      _buildSectionHeader('Type'),
+                      const SizedBox(height: 12),
+                      _buildDropdown(
+                        value: _selectedType,
+                        options: _typeOptions,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedType = value!;
+                          });
+                        },
+                      ),
 
                       const SizedBox(height: 40),
                       Row(
@@ -427,7 +461,9 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                               chords: chords,
                               sectionOrder: _sectionOrder,
                               lyrics: _lyrics.text.trim(),
-                              creator: _creator.text.trim(), // Save creator here
+                              creator: _creator.text.trim(),
+                              language: _selectedLanguage,
+                              type: _selectedType,
                             );
 
                             await repo.addSong(song);
@@ -499,6 +535,37 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
         ),
         maxLines: maxLines,
         minLines: minLines,
+      ),
+    );
+  }
+
+  // Dropdown builder method
+  Widget _buildDropdown({
+    required String value,
+    required List<String> options,
+    required Function(String?) onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          underline: Container(),
+          icon: const Icon(Icons.arrow_drop_down),
+          items: options.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
       ),
     );
   }

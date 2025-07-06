@@ -11,6 +11,9 @@ import 'pin_page.dart';
 import 'add_song_page.dart';
 import 'song_detail_page.dart';
 
+// Add language filter enum
+enum SongLanguageFilter { all, tagalog, english }
+
 class SongListPage extends StatefulWidget {
   final int initialIndex;
   const SongListPage({super.key, this.initialIndex = 0});
@@ -23,11 +26,14 @@ class _SongListPageState extends State<SongListPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearchFocused = false;
-  int _currentNavIndex = 0; // Add this for bottom navigation
+  int _currentNavIndex = 0;
 
   // Selection state for delete functionality
   bool _isSelectionMode = false;
   Set<String> _selectedSongs = <String>{};
+
+  // Language filter state
+  SongLanguageFilter _languageFilter = SongLanguageFilter.all;
 
   @override
   void initState() {
@@ -46,11 +52,46 @@ class _SongListPageState extends State<SongListPage> {
   }
 
   List<Song> _filterSongs(List<Song> songs) {
-    if (_searchQuery.isEmpty) return songs;
+    List<Song> filtered = songs;
 
-    return songs.where((song) {
-      return song.title.toLowerCase().contains(_searchQuery);
-    }).toList();
+    // Apply language filter first
+    switch (_languageFilter) {
+      case SongLanguageFilter.tagalog:
+        filtered = filtered.where((song) => song.language == 'Tagalog').toList();
+        break;
+      case SongLanguageFilter.english:
+        filtered = filtered.where((song) => song.language == 'English').toList();
+        break;
+      case SongLanguageFilter.all:
+      default:
+      // No language filtering
+        break;
+    }
+
+    // Then apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((song) {
+        return song.title.toLowerCase().contains(_searchQuery);
+      }).toList();
+    }
+
+    return filtered;
+  }
+
+  // Helper method for status text
+  String _getStatusText(int filteredCount, int totalCount) {
+    if (_searchQuery.isNotEmpty) {
+      return '$filteredCount of $totalCount songs';
+    }
+
+    switch (_languageFilter) {
+      case SongLanguageFilter.tagalog:
+        return '$filteredCount Tagalog ${filteredCount == 1 ? 'song' : 'songs'}';
+      case SongLanguageFilter.english:
+        return '$filteredCount English ${filteredCount == 1 ? 'song' : 'songs'}';
+      default:
+        return '$totalCount ${totalCount == 1 ? 'song' : 'songs'} available';
+    }
   }
 
   void _toggleSelectionMode() {
@@ -70,6 +111,15 @@ class _SongListPageState extends State<SongListPage> {
         _selectedSongs.add(songId);
       }
     });
+  }
+
+  // Add this method to handle filter changes
+  void _onFilterChanged(SongLanguageFilter? newFilter) {
+    if (newFilter != null) {
+      setState(() {
+        _languageFilter = newFilter;
+      });
+    }
   }
 
   // Add this method to handle bottom navigation
@@ -380,7 +430,56 @@ class _SongListPageState extends State<SongListPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+
+                  // Language filter dropdown
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.black12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: DropdownButton<SongLanguageFilter>(
+                          value: _languageFilter,
+                          icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                          underline: const SizedBox(),
+                          onChanged: _onFilterChanged,
+                          items: const [
+                            DropdownMenuItem(
+                              value: SongLanguageFilter.all,
+                              child: Text('All Languages'),
+                            ),
+                            DropdownMenuItem(
+                              value: SongLanguageFilter.tagalog,
+                              child: Text('Tagalog Only'),
+                            ),
+                            DropdownMenuItem(
+                              value: SongLanguageFilter.english,
+                              child: Text('English Only'),
+                            ),
+                          ],
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
                   // Search bar
                   Container(
                     decoration: BoxDecoration(
@@ -713,9 +812,7 @@ class _SongListPageState extends State<SongListPage> {
                               Text(
                                 auth.isAdmin
                                     ? 'Admin Mode Active'
-                                    : _searchQuery.isNotEmpty
-                                    ? '${filteredSongs.length} of ${allSongs.length} songs'
-                                    : '${allSongs.length} ${allSongs.length == 1 ? 'song' : 'songs'} available',
+                                    : _getStatusText(filteredSongs.length, allSongs.length),
                                 style: TextStyle(
                                   color: auth.isAdmin ? Colors.white : Colors.black,
                                   fontSize: 15,

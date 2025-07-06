@@ -14,7 +14,9 @@ class EditSongPage extends StatefulWidget {
 class _EditSongPageState extends State<EditSongPage> {
   late final TextEditingController _title;
   late final TextEditingController _lyrics;
-  late final TextEditingController _creator; // ✅ New field
+  late final TextEditingController _creator;
+  late final TextEditingController _language;  // NEW
+  late final TextEditingController _type;      // NEW
 
   final Map<String, TextEditingController> _chordSections = {};
   final List<String> _sectionOrder = [];
@@ -33,18 +35,20 @@ class _EditSongPageState extends State<EditSongPage> {
   @override
   void initState() {
     super.initState();
-    _title = TextEditingController(text: widget.song.title);
-    _lyrics = TextEditingController(text: widget.song.lyrics);
-    _creator = TextEditingController(text: widget.song.creator); // ✅ Init
+    _title    = TextEditingController(text: widget.song.title);
+    _lyrics   = TextEditingController(text: widget.song.lyrics);
+    _creator  = TextEditingController(text: widget.song.creator);
+    _language = TextEditingController(text: widget.song.language);  // NEW
+    _type     = TextEditingController(text: widget.song.type);      // NEW
 
     final chordsMap = widget.song.chords;
-    final order = widget.song.sectionOrder;
+    final order     = widget.song.sectionOrder;
 
     for (final section in order) {
-      _chordSections[section] = TextEditingController(text: chordsMap[section] ?? '');
+      _chordSections[section] =
+          TextEditingController(text: chordsMap[section] ?? '');
       _sectionOrder.add(section);
     }
-
     for (final section in defaultSections) {
       if (!_chordSections.containsKey(section)) {
         _chordSections[section] = TextEditingController();
@@ -101,20 +105,40 @@ class _EditSongPageState extends State<EditSongPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- Title ---
               TextField(
                 controller: _title,
                 decoration: const InputDecoration(labelText: 'Title'),
               ),
               const SizedBox(height: 16),
+
+              // --- Creator ---
               TextField(
                 controller: _creator,
-                decoration: const InputDecoration(labelText: 'Creator'), // ✅ Added creator input
+                decoration: const InputDecoration(labelText: 'Creator'),
               ),
               const SizedBox(height: 16),
+
+              // --- Language ---
+              TextField(
+                controller: _language,
+                decoration: const InputDecoration(labelText: 'Language'),
+              ),
+              const SizedBox(height: 16),
+
+              // --- Type ---
+              TextField(
+                controller: _type,
+                decoration: const InputDecoration(labelText: 'Type'),
+              ),
+              const SizedBox(height: 24),
+
+              // --- Chord Sections Header + Add Button ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("Chord Sections", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("Chord Sections",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   IconButton(
                     onPressed: _addNewSection,
                     icon: const Icon(Icons.add),
@@ -123,6 +147,8 @@ class _EditSongPageState extends State<EditSongPage> {
                 ],
               ),
               const SizedBox(height: 8),
+
+              // --- Reorderable List of Sections ---
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 400),
                 child: ReorderableListView.builder(
@@ -137,7 +163,7 @@ class _EditSongPageState extends State<EditSongPage> {
                     });
                   },
                   itemBuilder: (context, index) {
-                    final section = _sectionOrder[index];
+                    final section  = _sectionOrder[index];
                     final controller = _chordSections[section]!;
 
                     return ListTile(
@@ -155,8 +181,12 @@ class _EditSongPageState extends State<EditSongPage> {
                   },
                 ),
               ),
+
               const SizedBox(height: 24),
-              const Text("Lyrics", style: TextStyle(fontWeight: FontWeight.bold)),
+
+              // --- Lyrics ---
+              const Text("Lyrics",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextField(
                 controller: _lyrics,
@@ -166,24 +196,34 @@ class _EditSongPageState extends State<EditSongPage> {
                 ),
                 maxLines: null,
               ),
+
               const SizedBox(height: 24),
+
+              // --- Update Button ---
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
+                    // Gather chords
                     final chords = {
                       for (final section in _sectionOrder)
-                        if (_chordSections[section]!.text.trim().isNotEmpty)
+                        if (_chordSections[section]!
+                            .text
+                            .trim()
+                            .isNotEmpty)
                           section: _chordSections[section]!.text.trim()
                     };
 
+                    // Build updated Song (with language & type!)
                     final updated = Song(
                       id: widget.song.id,
                       title: _title.text.trim(),
                       chords: chords,
                       sectionOrder: _sectionOrder,
                       lyrics: _lyrics.text.trim(),
-                      creator: _creator.text.trim(), // ✅ Save updated creator
+                      creator: _creator.text.trim(),
+                      language: _language.text.trim(),  // NEW
+                      type: _type.text.trim(),          // NEW
                     );
 
                     await repo.updateSong(updated);
