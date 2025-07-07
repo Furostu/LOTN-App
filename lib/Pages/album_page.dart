@@ -19,15 +19,21 @@ class AlbumsPage extends StatefulWidget {
 }
 
 class _AlbumsPageState extends State<AlbumsPage> {
-  int _currentNavIndex = 1; // Albums is the middle tab
+  int _currentNavIndex = 1;
   bool _isSelectionMode = false;
   Set<String> _selectedAlbumIds = <String>{};
   bool _isGeneratingAlbums = false;
 
-  // → Search bar fields
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchFocused = false;
   String _searchQuery = '';
+
+  static const Color black = Color(0xFF000000);
+  static const Color darkGray1 = Color(0xFF1F1F1F);
+  static const Color darkGray2 = Color(0xFF242424);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGray1 = Color(0xFFF2F2F2);
+  static const Color lightGray2 = Color(0xFFE2E2E2);
 
   @override
   void initState() {
@@ -53,7 +59,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
         dest = const SongListPage(initialIndex: 0);
         break;
       case 1:
-        return; // already here
+        return;
       case 2:
         dest = const BookmarkPage();
         break;
@@ -97,9 +103,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
   }
 
   void _confirmDeleteSelected(List<Album> albums) {
-    final selectedAlbums =
-    albums.where((a) => _selectedAlbumIds.contains(a.id)).toList();
-
+    final selectedAlbums = albums.where((a) => _selectedAlbumIds.contains(a.id)).toList();
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
@@ -154,19 +158,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
     );
   }
 
-  // New method to generate artist albums automatically
   Future<void> _generateArtistAlbums() async {
     setState(() => _isGeneratingAlbums = true);
-
     try {
       final songRepo = context.read<SongRepository>();
       final albumRepo = context.read<AlbumRepository>();
-
-      // Get all songs
       final songs = await songRepo.getAllSongs();
       final existingAlbums = await albumRepo.getAllAlbums();
 
-      // Group songs by creator (not artist)
       final Map<String, List<Song>> creatorSongs = {};
       for (final song in songs) {
         final creator = song.creator?.trim() ?? 'Unknown';
@@ -175,31 +174,24 @@ class _AlbumsPageState extends State<AlbumsPage> {
         }
       }
 
-      // Create albums for creators with 2 or more songs
       int albumsCreated = 0;
       for (final entry in creatorSongs.entries) {
         final creator = entry.key;
         final creatorSongList = entry.value;
-
         if (creatorSongList.length >= 2) {
-          // Check if album already exists for this creator
           final existingAlbum = existingAlbums.firstWhere(
                 (album) => album.name.toLowerCase() == creator.toLowerCase(),
             orElse: () => Album(id: '', name: '', songIds: []),
           );
-
           if (existingAlbum.id.isEmpty) {
-            // Create new album
             final songIds = creatorSongList.map((song) => song.id).toList();
             await albumRepo.addAlbumWithSongs(creator, songIds);
             albumsCreated++;
           } else {
-            // Update existing album with any new songs
             final newSongIds = creatorSongList
                 .map((song) => song.id)
                 .where((id) => !existingAlbum.songIds.contains(id))
                 .toList();
-
             if (newSongIds.isNotEmpty) {
               await albumRepo.addSongsToAlbum(existingAlbum.id, newSongIds);
             }
@@ -207,7 +199,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
         }
       }
 
-      // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -223,7 +214,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
         );
       }
     } catch (e) {
-      // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -245,13 +235,11 @@ class _AlbumsPageState extends State<AlbumsPage> {
   Widget build(BuildContext context) {
     final repo = context.watch<AlbumRepository>();
     final isAdmin = context.watch<AuthService>().isAdmin;
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: lightGray1,
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
               child: Row(
@@ -259,10 +247,17 @@ class _AlbumsPageState extends State<AlbumsPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.black87,
+                      color: white,
                       borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.album, color: Colors.white, size: 24),
+                    child: const Icon(Icons.album, color: black, size: 24),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -272,7 +267,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                         Text(
                           _isSelectionMode ? 'Select Albums' : 'Albums',
                           style: const TextStyle(
-                            color: Colors.black,
+                            color: black,
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.5,
@@ -283,8 +278,8 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           _isSelectionMode
                               ? '${_selectedAlbumIds.length} selected'
                               : 'Your custom song collections',
-                          style: const TextStyle(
-                            color: Colors.black54,
+                          style: TextStyle(
+                            color: darkGray2,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             letterSpacing: -0.2,
@@ -299,20 +294,19 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.black12,
+                          color: lightGray2,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.close, color: Colors.black, size: 16),
+                        child: const Icon(Icons.close, color: black, size: 16),
                       ),
                     ),
                   ] else ...[
-                    // Auto-generate artist albums button
                     GestureDetector(
                       onTap: _isGeneratingAlbums ? null : _generateArtistAlbums,
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _isGeneratingAlbums ? Colors.black26 : Colors.blue,
+                          color: _isGeneratingAlbums ? lightGray2 : Colors.blue,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: _isGeneratingAlbums
@@ -321,10 +315,10 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(white),
                           ),
                         )
-                            : const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                            : const Icon(Icons.auto_awesome, color: white, size: 16),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -334,10 +328,10 @@ class _AlbumsPageState extends State<AlbumsPage> {
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.black12,
+                            color: lightGray2,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.checklist, color: Colors.black, size: 16),
+                          child: const Icon(Icons.checklist, color: black, size: 16),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -347,33 +341,33 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: black,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 16),
+                        child: const Icon(Icons.add, color: white, size: 16),
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-
-            // Search bar (above albums)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  color: white,
+                  borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: _isSearchFocused ? Colors.black : Colors.black12,
+                    color: _isSearchFocused ? black : lightGray2,
                     width: _isSearchFocused ? 2 : 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: _isSearchFocused
+                          ? black.withOpacity(0.2)
+                          : black.withOpacity(0.1),
+                      blurRadius: _isSearchFocused ? 14 : 6,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
@@ -383,37 +377,37 @@ class _AlbumsPageState extends State<AlbumsPage> {
                   },
                   child: TextField(
                     controller: _searchController,
-                    style: const TextStyle(
-                      color: Colors.black87,
+                    style: TextStyle(
+                      color: black,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search albums...',
-                      hintStyle: const TextStyle(
-                        color: Colors.black38,
+                      hintStyle: TextStyle(
+                        color: darkGray2.withOpacity(0.7),
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
                       ),
                       prefixIcon: Container(
                         padding: const EdgeInsets.all(12),
-                        child: const Icon(
+                        child: Icon(
                           Icons.search,
-                          color: Colors.black54,
+                          color: _isSearchFocused ? black : darkGray2,
                           size: 22,
                         ),
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
                         icon: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: darkGray2,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.clear,
-                            color: Colors.white,
+                            color: white,
                             size: 16,
                           ),
                         ),
@@ -432,8 +426,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
                 ),
               ),
             ),
-
-            // Selection toolbar
             if (_isSelectionMode) ...[
               const SizedBox(height: 16),
               StreamBuilder<List<Album>>(
@@ -444,9 +436,9 @@ class _AlbumsPageState extends State<AlbumsPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.black12),
+                      border: Border.all(color: lightGray2, width: 1),
                     ),
                     child: Row(
                       children: [
@@ -455,16 +447,16 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: lightGray2,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.black12),
+                              border: Border.all(color: lightGray2, width: 1),
                             ),
                             child: const Text(
                               'Select All',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black,
+                                color: black,
                                 letterSpacing: -0.2,
                               ),
                             ),
@@ -476,16 +468,16 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: lightGray2,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.black12),
+                              border: Border.all(color: lightGray2, width: 1),
                             ),
                             child: const Text(
                               'Clear',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black,
+                                color: black,
                                 letterSpacing: -0.2,
                               ),
                             ),
@@ -499,7 +491,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: _selectedAlbumIds.isNotEmpty ? Colors.black : Colors.black26,
+                              color: _selectedAlbumIds.isNotEmpty ? black : lightGray2,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -508,7 +500,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                 Icon(
                                   Icons.delete_outline,
                                   color: _selectedAlbumIds.isNotEmpty
-                                      ? Colors.white
+                                      ? white
                                       : Colors.white70,
                                   size: 16,
                                 ),
@@ -519,7 +511,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: _selectedAlbumIds.isNotEmpty
-                                        ? Colors.white
+                                        ? white
                                         : Colors.white70,
                                     letterSpacing: -0.2,
                                   ),
@@ -534,10 +526,7 @@ class _AlbumsPageState extends State<AlbumsPage> {
                 },
               ),
             ],
-
             const SizedBox(height: 24),
-
-            // Albums list
             Expanded(
               child: StreamBuilder<List<Album>>(
                 stream: repo.albumsStream,
@@ -582,7 +571,185 @@ class _AlbumsPageState extends State<AlbumsPage> {
   }
 }
 
-// Rest of the classes remain the same...
+class _AlbumCard extends StatelessWidget {
+  final Album album;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback onToggleSelection;
+
+  const _AlbumCard({
+    required this.album,
+    required this.isSelectionMode,
+    required this.isSelected,
+    required this.onToggleSelection,
+  });
+
+  static const Color black = Color(0xFF000000);
+  static const Color darkGray2 = Color(0xFF242424);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGray2 = Color(0xFFE2E2E2);
+
+  @override
+  Widget build(BuildContext context) {
+    final count = album.songIds.length;
+    final isAdmin = context.watch<AuthService>().isAdmin;
+    final repo = context.read<AlbumRepository>();
+
+    void _confirmDelete() {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          opaque: false,
+          barrierColor: Colors.black.withOpacity(0.6),
+          barrierDismissible: false,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return _CustomDeleteDialog(
+              album: album,
+              onDelete: () {
+                repo.deleteAlbum(album.id);
+                Navigator.of(context).pop();
+              },
+              onCancel: () => Navigator.of(context).pop(),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.7, end: 1.0).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+                ),
+                child: child,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isSelected ? black : lightGray2,
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isSelected ? 0.2 : 0.08),
+            blurRadius: isSelected ? 16 : 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: isSelectionMode
+              ? onToggleSelection
+              : () {
+            Navigator.of(context).push(
+              FadePageRoute(
+                builder: (_) => AlbumDetailPage(album: album),
+              ),
+            );
+          },
+          onLongPress: isAdmin && !isSelectionMode ? _confirmDelete : null,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                if (isSelectionMode)
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: isSelected ? black : Colors.transparent,
+                      border: Border.all(
+                        color: isSelected ? black : darkGray2,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: isSelected
+                        ? const Icon(
+                      Icons.check,
+                      color: white,
+                      size: 14,
+                    )
+                        : null,
+                  ),
+                if (isSelectionMode) const SizedBox(width: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [darkGray2, black],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  width: 48,
+                  height: 48,
+                  child: const Icon(Icons.album, color: white, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        album.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$count song${count == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          color: darkGray2,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isSelectionMode)
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: lightGray2,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.chevron_right,
+                      color: darkGray2,
+                      size: 14,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CustomAddAlbumDialog extends StatefulWidget {
   final Function(String) onCreateAlbum;
   final VoidCallback onCancel;
@@ -777,135 +944,6 @@ class _CustomAddAlbumDialogState extends State<_CustomAddAlbumDialog> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _AlbumCard extends StatelessWidget {
-  final Album album;
-  final bool isSelectionMode;
-  final bool isSelected;
-  final VoidCallback onToggleSelection;
-
-  const _AlbumCard({
-    required this.album,
-    required this.isSelectionMode,
-    required this.isSelected,
-    required this.onToggleSelection,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final count = album.songIds.length;
-    final isAdmin = context.watch<AuthService>().isAdmin;
-    final repo = context.read<AlbumRepository>();
-
-    void _confirmDelete() {
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          opaque: false,
-          barrierColor: Colors.black.withOpacity(0.6),
-          barrierDismissible: false,
-          pageBuilder: (context, animation, secondaryAnimation) {
-            return _CustomDeleteDialog(
-              album: album,
-              onDelete: () {
-                repo.deleteAlbum(album.id);
-                Navigator.of(context).pop();
-              },
-              onCancel: () => Navigator.of(context).pop(),
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 300),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.7, end: 1.0).animate(
-                  CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-                ),
-                child: child,
-              ),
-            );
-          },
-        ),
-      );
-    }
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.black.withOpacity(0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isSelected ? Colors.black : Colors.black12,
-          width: isSelected ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isSelected ? 0.1 : 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isSelectionMode) ...[
-              GestureDetector(
-                onTap: onToggleSelection,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.black : Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: isSelected
-                      ? const Icon(Icons.check, color: Colors.white, size: 16)
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              width: 48,
-              height: 48,
-              child: const Icon(Icons.album, color: Colors.white, size: 24),
-            ),
-          ],
-        ),
-        title: Text(
-          album.name,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          '$count song${count == 1 ? '' : 's'}',
-          style: const TextStyle(color: Colors.black54),
-        ),
-        trailing: isSelectionMode
-            ? null
-            : const Icon(Icons.chevron_right, color: Colors.black54),
-        onTap: isSelectionMode
-            ? onToggleSelection
-            : () {
-          Navigator.of(context).push(
-            FadePageRoute(
-              builder: (_) => AlbumDetailPage(album: album),
-            ),
-          );
-        },
-        onLongPress: isAdmin && !isSelectionMode ? _confirmDelete : null,
       ),
     );
   }

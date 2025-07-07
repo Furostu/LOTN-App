@@ -5,10 +5,20 @@ import '../Models/songs.dart';
 import '../Services/auth_service.dart';
 import '../transition.dart';
 import 'edit_song_page.dart';
-import 'bookmark_page.dart';
+
+// Define color palette
+class AppColors {
+  static const Color black = Color(0xFF000000);
+  static const Color darkGray1 = Color(0xFF1F1F1F);
+  static const Color darkGray2 = Color(0xFF242424);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGray1 = Color(0xFFF2F2F2);
+  static const Color lightGray2 = Color(0xFFE2E2E2);
+}
 
 class SongDetailPage extends StatefulWidget {
   final Song song;
+
   const SongDetailPage({super.key, required this.song});
 
   @override
@@ -27,33 +37,29 @@ class _SongDetailPageState extends State<SongDetailPage> {
   ];
 
   static const Map<String, String> _enharmonicEquivalents = {
-    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
+    'Db': 'C#',
+    'Eb': 'D#',
+    'Gb': 'F#',
+    'Ab': 'G#',
+    'Bb': 'A#'
   };
 
   // Transpose a single chord
   String _transposeChord(String chord) {
     if (_transposeSteps == 0) return chord;
-
-    // Handle slash chords (e.g., E/G#m)
     if (chord.contains('/')) {
       List<String> parts = chord.split('/');
       String mainChord = _transposeSingleChord(parts[0]);
       String bassChord = _transposeSingleChord(parts[1]);
       return '$mainChord/$bassChord';
     }
-
     return _transposeSingleChord(chord);
   }
 
-  // Helper method to transpose a single chord without slash
   String _transposeSingleChord(String chord) {
     if (_transposeSteps == 0) return chord;
-
-    // Handle complex chords by extracting the root note
     String rootNote = '';
     String suffix = '';
-
-    // Find the root note (can be 1 or 2 characters)
     if (chord.length >= 2 && (chord[1] == '#' || chord[1] == 'b')) {
       rootNote = chord.substring(0, 2);
       suffix = chord.substring(2);
@@ -61,28 +67,18 @@ class _SongDetailPageState extends State<SongDetailPage> {
       rootNote = chord.substring(0, 1);
       suffix = chord.substring(1);
     }
-
-    // Convert enharmonic equivalents
     if (_enharmonicEquivalents.containsKey(rootNote)) {
       rootNote = _enharmonicEquivalents[rootNote]!;
     }
-
-    // Find the index of the root note
     int currentIndex = _chromaticScale.indexOf(rootNote);
-    if (currentIndex == -1) return chord; // Return original if not found
-
-    // Calculate new index with transposition
+    if (currentIndex == -1) return chord;
     int newIndex = (currentIndex + _transposeSteps) % 12;
     if (newIndex < 0) newIndex += 12;
-
     return _chromaticScale[newIndex] + suffix;
   }
 
-  // Transpose all chords in a chord progression string while preserving formatting
   String _transposeChordProgression(String chordProgression) {
     if (_transposeSteps == 0) return chordProgression;
-
-    // Use regex to find and replace only the chord patterns while preserving everything else
     return chordProgression.replaceAllMapped(
       RegExp(r'\b([A-G][#b]?(?:m|maj|dim|aug|sus|add|\d)*(?:\/[A-G][#b]?)?)\b'),
           (Match match) {
@@ -92,7 +88,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
     );
   }
 
-  // Update transpose and save to phone
   void _updateTranspose(int change) {
     setState(() {
       _transposeSteps += change;
@@ -100,10 +95,8 @@ class _SongDetailPageState extends State<SongDetailPage> {
     _saveTransposeSettings();
   }
 
-  // Get the transposed chords map
   Map<String, String> get _transposedChords {
     if (_transposeSteps == 0) return widget.song.chords;
-
     Map<String, String> transposed = {};
     widget.song.chords.forEach((key, value) {
       transposed[key] = _transposeChordProgression(value);
@@ -118,7 +111,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
     _loadBookmarkStatus();
   }
 
-  // Load saved transpose setting for this specific song
   Future<void> _loadTransposeSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -127,12 +119,10 @@ class _SongDetailPageState extends State<SongDetailPage> {
         _transposeSteps = savedTranspose;
       });
     } catch (e) {
-      // If there's an error loading, just keep default value
       print('Error loading transpose settings: $e');
     }
   }
 
-  // Save transpose setting for this specific song
   Future<void> _saveTransposeSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -142,7 +132,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
     }
   }
 
-  // Load bookmark status for this song
   Future<void> _loadBookmarkStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -155,44 +144,35 @@ class _SongDetailPageState extends State<SongDetailPage> {
     }
   }
 
-  // Toggle bookmark status
   Future<void> _toggleBookmark() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       List<String> bookmarkedSongs = prefs.getStringList('bookmarked_songs') ?? [];
-
       if (_isBookmarked) {
-        // Remove from bookmarks
         bookmarkedSongs.remove(widget.song.id);
         setState(() {
           _isBookmarked = false;
         });
-
-        // Show snackbar
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Removed from bookmarks'),
             duration: Duration(seconds: 2),
-            backgroundColor: Colors.grey[800],
+            backgroundColor: Colors.grey,
           ),
         );
       } else {
-        // Add to bookmarks
         bookmarkedSongs.add(widget.song.id);
         setState(() {
           _isBookmarked = true;
         });
-
-        // Show snackbar
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Added to bookmarks'),
             duration: Duration(seconds: 2),
-            backgroundColor: Colors.green[600],
+            backgroundColor: Colors.green,
           ),
         );
       }
-
       await prefs.setStringList('bookmarked_songs', bookmarkedSongs);
     } catch (e) {
       print('Error toggling bookmark: $e');
@@ -204,69 +184,62 @@ class _SongDetailPageState extends State<SongDetailPage> {
     final isAdmin = context.watch<AuthService>().isAdmin;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightGray1,
       body: SafeArea(
         child: Column(
           children: [
             // Header with back button and controls
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              color: AppColors.lightGray1, // Match the background color
+              padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
-                  // Back button
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.lightGray2,
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Icon(
                         Icons.arrow_back_ios,
-                        color: Colors.black87,
+                        color: AppColors.black,
                         size: 16,
                       ),
                     ),
                   ),
                   const SizedBox(width: 16),
-
-                  // Title
                   Expanded(
                     child: Text(
-                      '${widget.song.title}  –  ${widget.song.creator}',
+                      '${widget.song.title} – ${widget.song.creator}',
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: AppColors.black,
                         fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.0,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-
-                  // Controls row
                   Row(
                     children: [
-                      // Bookmark button
                       GestureDetector(
                         onTap: _toggleBookmark,
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: _isBookmarked ? Colors.amber : Colors.grey[50],
+                            color: _isBookmarked ? Colors.amber : AppColors.lightGray2,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
                             _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                            color: _isBookmarked ? Colors.white : Colors.black54,
+                            color: _isBookmarked ? AppColors.white : AppColors.black,
                             size: 16,
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
-
-                      // Font size control
                       GestureDetector(
                         onTap: () {
                           setState(() {
@@ -280,7 +253,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: _fontScale > 1.0 ? Colors.black : Colors.grey[50],
+                            color: _fontScale > 1.0 ? AppColors.black : AppColors.lightGray2,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
@@ -288,7 +261,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
                             children: [
                               Icon(
                                 Icons.text_fields,
-                                color: _fontScale > 1.0 ? Colors.white : Colors.black54,
+                                color: _fontScale > 1.0 ? AppColors.white : AppColors.black,
                                 size: 16,
                               ),
                               if (_fontScale > 1.0) ...[
@@ -296,7 +269,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
                                 Text(
                                   '${(_fontScale * 100).toInt()}%',
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -306,8 +279,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
                           ),
                         ),
                       ),
-
-                      // Edit button for admin
                       if (isAdmin) ...[
                         const SizedBox(width: 8),
                         GestureDetector(
@@ -320,12 +291,12 @@ class _SongDetailPageState extends State<SongDetailPage> {
                           child: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.black,
+                              color: AppColors.lightGray2,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
                               Icons.edit_outlined,
-                              color: Colors.white,
+                              color: AppColors.black,
                               size: 16,
                             ),
                           ),
@@ -336,18 +307,16 @@ class _SongDetailPageState extends State<SongDetailPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 32),
-
             // Toggle buttons
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 32),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.black12,
+                  color: AppColors.lightGray2,
                   width: 1,
                 ),
               ),
@@ -359,14 +328,14 @@ class _SongDetailPageState extends State<SongDetailPage> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: _showChords ? Colors.black : Colors.transparent,
+                          color: _showChords ? AppColors.black : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           'Chords',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: _showChords ? Colors.white : Colors.black54,
+                            color: _showChords ? AppColors.white : AppColors.black,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -380,14 +349,14 @@ class _SongDetailPageState extends State<SongDetailPage> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: !_showChords ? Colors.black : Colors.transparent,
+                          color: !_showChords ? AppColors.black : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           'Lyrics',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: !_showChords ? Colors.white : Colors.black54,
+                            color: !_showChords ? AppColors.white : AppColors.black,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -398,41 +367,37 @@ class _SongDetailPageState extends State<SongDetailPage> {
                 ],
               ),
             ),
-
-            // Transpose controls (only show when chords are visible)
+            // Transpose controls
             if (_showChords) ...[
               const SizedBox(height: 20),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 32),
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: AppColors.lightGray1,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Colors.black12,
+                    color: AppColors.lightGray2,
                     width: 1,
                   ),
                 ),
                 child: Row(
                   children: [
-                    // Transpose down button
                     GestureDetector(
                       onTap: () => _updateTranspose(-1),
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: _transposeSteps < 0 ? Colors.black : Colors.transparent,
+                          color: _transposeSteps < 0 ? AppColors.black : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.remove,
-                          color: _transposeSteps < 0 ? Colors.white : Colors.black54,
+                          color: _transposeSteps < 0 ? AppColors.white : AppColors.black,
                           size: 16,
                         ),
                       ),
                     ),
-
-                    // Transpose info
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -441,7 +406,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
                             Text(
                               'Transpose',
                               style: TextStyle(
-                                color: Colors.black54,
+                                color: AppColors.black,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -452,7 +417,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
                                   ? 'Original'
                                   : '${_transposeSteps > 0 ? '+' : ''}$_transposeSteps',
                               style: TextStyle(
-                                color: Colors.black,
+                                color: AppColors.black,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -461,19 +426,17 @@ class _SongDetailPageState extends State<SongDetailPage> {
                         ),
                       ),
                     ),
-
-                    // Transpose up button
                     GestureDetector(
                       onTap: () => _updateTranspose(1),
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: _transposeSteps > 0 ? Colors.black : Colors.transparent,
+                          color: _transposeSteps > 0 ? AppColors.black : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.add,
-                          color: _transposeSteps > 0 ? Colors.white : Colors.black54,
+                          color: _transposeSteps > 0 ? AppColors.white : AppColors.black,
                           size: 16,
                         ),
                       ),
@@ -482,9 +445,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
                 ),
               ),
             ],
-
             const SizedBox(height: 40),
-
             // Main content
             Expanded(
               child: SingleChildScrollView(
@@ -493,7 +454,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_showChords) ...[
-                      // Chords section - clean layout
                       for (final section in widget.song.sectionOrder)
                         if (widget.song.chords[section]?.trim().isNotEmpty ?? false)
                           Container(
@@ -501,13 +461,12 @@ class _SongDetailPageState extends State<SongDetailPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Section header with subtle line
                                 Row(
                                   children: [
                                     Text(
                                       section.toUpperCase(),
                                       style: TextStyle(
-                                        color: Colors.black,
+                                        color: AppColors.black,
                                         fontSize: 12 * _fontScale,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: 1.2,
@@ -517,20 +476,18 @@ class _SongDetailPageState extends State<SongDetailPage> {
                                     Expanded(
                                       child: Container(
                                         height: 1,
-                                        color: Colors.grey[200],
+                                        color: AppColors.lightGray2,
                                       ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-
-                                // Chords content (transposed)
                                 Text(
                                   _transposedChords[section]!,
                                   style: TextStyle(
                                     fontFamily: 'monospace',
                                     fontSize: 16 * _fontScale,
-                                    color: Colors.black87,
+                                    color: AppColors.black,
                                     height: 1.8,
                                     letterSpacing: 0.3,
                                   ),
@@ -539,14 +496,13 @@ class _SongDetailPageState extends State<SongDetailPage> {
                             ),
                           ),
                     ] else ...[
-                      // Lyrics section - clean layout
                       Container(
                         child: Text(
                           widget.song.lyrics,
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 16 * _fontScale,
-                            color: Colors.black87,
+                            color: AppColors.black,
                             height: 1.8,
                             letterSpacing: 0.3,
                           ),

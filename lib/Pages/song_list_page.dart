@@ -34,6 +34,15 @@ class _SongListPageState extends State<SongListPage> {
 
   // Language filter state
   SongLanguageFilter _languageFilter = SongLanguageFilter.all;
+  SongTypeFilter _typeFilter = SongTypeFilter.all;
+
+  // New color palette
+  static const Color black = Color(0xFF000000);
+  static const Color darkGray1 = Color(0xFF1F1F1F);
+  static const Color darkGray2 = Color(0xFF242424);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGray1 = Color(0xFFF2F2F2);
+  static const Color lightGray2 = Color(0xFFE2E2E2);
 
   @override
   void initState() {
@@ -51,175 +60,36 @@ class _SongListPageState extends State<SongListPage> {
     super.dispose();
   }
 
-  List<Song> _filterSongs(List<Song> songs) {
-    List<Song> filtered = songs;
-
-    // Apply language filter first
-    switch (_languageFilter) {
-      case SongLanguageFilter.tagalog:
-        filtered = filtered.where((song) => song.language == 'Tagalog').toList();
-        break;
-      case SongLanguageFilter.english:
-        filtered = filtered.where((song) => song.language == 'English').toList();
-        break;
-      case SongLanguageFilter.all:
-      default:
-      // No language filtering
-        break;
-    }
-
-    // Then apply search filter
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((song) {
-        return song.title.toLowerCase().contains(_searchQuery);
-      }).toList();
-    }
-
-    return filtered;
-  }
-
-  // Helper method for status text
-  String _getStatusText(int filteredCount, int totalCount) {
-    if (_searchQuery.isNotEmpty) {
-      return '$filteredCount of $totalCount songs';
-    }
-
-    switch (_languageFilter) {
-      case SongLanguageFilter.tagalog:
-        return '$filteredCount Tagalog ${filteredCount == 1 ? 'song' : 'songs'}';
-      case SongLanguageFilter.english:
-        return '$filteredCount English ${filteredCount == 1 ? 'song' : 'songs'}';
-      default:
-        return '$totalCount ${totalCount == 1 ? 'song' : 'songs'} available';
-    }
-  }
-
-  void _toggleSelectionMode() {
-    setState(() {
-      _isSelectionMode = !_isSelectionMode;
-      if (!_isSelectionMode) {
-        _selectedSongs.clear();
-      }
-    });
-  }
-
-  void _toggleSongSelection(String songId) {
-    setState(() {
-      if (_selectedSongs.contains(songId)) {
-        _selectedSongs.remove(songId);
-      } else {
-        _selectedSongs.add(songId);
-      }
-    });
-  }
-
-  // Add this method to handle filter changes
-  void _onFilterChanged(SongLanguageFilter? newFilter) {
-    if (newFilter != null) {
-      setState(() {
-        _languageFilter = newFilter;
-      });
-    }
-  }
-
-  // Add this method to handle bottom navigation
-  void _onNavItemTapped(int index) {
-    setState(() {
-      _currentNavIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        break;
-      case 1:
-        Navigator.push(
-          context,
-          FadePageRoute(builder: (_) => const AlbumsPage()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          FadePageRoute(builder: (_) => const BookmarkPage()),
-        );
-        break;
-    }
-  }
-
-  // Add these methods for logout and delete confirmation dialogs
-  void _showLogoutDialog(BuildContext context, AuthService auth) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout from admin mode?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                auth.logout();
-                Navigator.of(context).pop();
-              },
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Updated delete confirmation dialog with custom styling
-  void _showDeleteConfirmDialog(BuildContext context, SongRepository repo) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.black.withOpacity(0.6),
-        barrierDismissible: false,
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return CustomSongDeleteDialog(  // This class needs to be created
-            selectedCount: _selectedSongs.length,
-            onDelete: () async {
-              for (String songId in _selectedSongs) {
-                await repo.deleteSong(songId);
-              }
-              _toggleSelectionMode();
-              Navigator.of(context).pop();
-            },
-            onCancel: () => Navigator.of(context).pop(),
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.7, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-              ),
-              child: child,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final repo = context.watch<SongRepository>();
     final auth = context.watch<AuthService>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: lightGray1,
       body: SafeArea(
         child: Column(
           children: [
             // Header Section
             Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [darkGray1, darkGray2],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: black.withOpacity(0.3),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,15 +98,22 @@ class _SongListPageState extends State<SongListPage> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(12), // Adjust padding as needed
                         decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(16),
+                          color: white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        child: const Icon(
-                          Icons.music_note,
-                          color: Colors.white,
-                          size: 24,
+                        child: Image.asset(
+                          'assets/logo.png', // Path to your logo image
+                          width: 48, // Adjust width as needed
+                          height: 48, // Adjust height as needed
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -247,19 +124,19 @@ class _SongListPageState extends State<SongListPage> {
                             Text(
                               'LOTN',
                               style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.5,
+                                color: white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1.0,
                               ),
                             ),
                             Text(
-                              'Song Chords',
+                              'Song Chords Collection',
                               style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 14,
+                                color: lightGray2,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w500,
-                                letterSpacing: -0.2,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ],
@@ -267,23 +144,30 @@ class _SongListPageState extends State<SongListPage> {
                       ),
                       PopupMenuButton<String>(
                         icon: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(12),
+                            color: white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.more_vert,
-                            color: Colors.white,
-                            size: 20,
+                            color: black,
+                            size: 24,
                           ),
                         ),
-                        color: Colors.white,
+                        color: white,
                         elevation: 20,
-                        shadowColor: Colors.black.withOpacity(0.15),
+                        shadowColor: black.withOpacity(0.3),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(color: Colors.black12, width: 1),
+                          borderRadius: BorderRadius.circular(24),
+                          side: BorderSide(color: lightGray2, width: 1),
                         ),
                         itemBuilder: (BuildContext context) => [
                           if (!auth.isAdmin)
@@ -292,24 +176,24 @@ class _SongListPageState extends State<SongListPage> {
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(6),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.black,
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: darkGray2,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
                                       Icons.login,
-                                      color: Colors.white,
-                                      size: 16,
+                                      color: white,
+                                      size: 18,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text(
+                                  Text(
                                     'Admin Login',
                                     style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
+                                      color: black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -321,24 +205,24 @@ class _SongListPageState extends State<SongListPage> {
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(6),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.black,
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: darkGray2,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
                                       Icons.logout,
-                                      color: Colors.white,
-                                      size: 16,
+                                      color: white,
+                                      size: 18,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text(
+                                  Text(
                                     'Logout Admin',
                                     style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
+                                      color: black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -350,24 +234,24 @@ class _SongListPageState extends State<SongListPage> {
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(6),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.black,
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: darkGray2,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
                                       Icons.add,
-                                      color: Colors.white,
-                                      size: 16,
+                                      color: white,
+                                      size: 18,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text(
+                                  Text(
                                     'Add Song',
                                     style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
+                                      color: black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -379,24 +263,24 @@ class _SongListPageState extends State<SongListPage> {
                               child: Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(6),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.black,
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: darkGray2,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
                                       Icons.delete,
-                                      color: Colors.white,
-                                      size: 16,
+                                      color: white,
+                                      size: 18,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text(
+                                  Text(
                                     'Delete Songs',
                                     style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
+                                      color: black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -430,70 +314,138 @@ class _SongListPageState extends State<SongListPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                  // Language filter dropdown
+                  // Filter dropdowns
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.black12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12), // Reduced from 16 to 12
+                          decoration: BoxDecoration(
+                            color: white,
+                            borderRadius: BorderRadius.circular(16), // Reduced from 20 to 16
+                            border: Border.all(color: lightGray2, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: black.withOpacity(0.1),
+                                blurRadius: 6, // Reduced from 8 to 6
+                                offset: const Offset(0, 3), // Reduced from 4 to 3
+                              ),
+                            ],
+                          ),
+                          child: DropdownButton<SongLanguageFilter>(
+                            value: _languageFilter,
+                            icon: Icon(Icons.arrow_drop_down, color: darkGray2),
+                            underline: const SizedBox(),
+                            isExpanded: true,
+                            onChanged: _onFilterChanged,
+                            items: const [
+                              DropdownMenuItem(
+                                value: SongLanguageFilter.all,
+                                child: Text(
+                                  'All Languages',
+                                  style: TextStyle(fontSize: 13), // Reduced from 15 to 13
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: SongLanguageFilter.tagalog,
+                                child: Text(
+                                  'Tagalog Only',
+                                  style: TextStyle(fontSize: 13), // Reduced from 15 to 13
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: SongLanguageFilter.english,
+                                child: Text(
+                                  'English Only',
+                                  style: TextStyle(fontSize: 13), // Reduced from 15 to 13
+                                ),
+                              ),
+                            ],
+                            style: TextStyle(
+                              color: black,
+                              fontSize: 13, // Reduced from 15 to 13
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
-                        ),
-                        child: DropdownButton<SongLanguageFilter>(
-                          value: _languageFilter,
-                          icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
-                          underline: const SizedBox(),
-                          onChanged: _onFilterChanged,
-                          items: const [
-                            DropdownMenuItem(
-                              value: SongLanguageFilter.all,
-                              child: Text('All Languages'),
-                            ),
-                            DropdownMenuItem(
-                              value: SongLanguageFilter.tagalog,
-                              child: Text('Tagalog Only'),
-                            ),
-                            DropdownMenuItem(
-                              value: SongLanguageFilter.english,
-                              child: Text('English Only'),
-                            ),
-                          ],
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 12), // Reduced from 16 to 12
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12), // Reduced from 16 to 12
+                          decoration: BoxDecoration(
+                            color: white,
+                            borderRadius: BorderRadius.circular(16), // Reduced from 20 to 16
+                            border: Border.all(color: lightGray2, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: black.withOpacity(0.1),
+                                blurRadius: 6, // Reduced from 8 to 6
+                                offset: const Offset(0, 3), // Reduced from 4 to 3
+                              ),
+                            ],
+                          ),
+                          child: DropdownButton<SongTypeFilter>(
+                            value: _typeFilter,
+                            icon: Icon(Icons.arrow_drop_down, color: darkGray2),
+                            underline: const SizedBox(),
+                            isExpanded: true,
+                            onChanged: (newType) {
+                              if (newType != null) setState(() => _typeFilter = newType);
+                            },
+                            items: const [
+                              DropdownMenuItem(
+                                value: SongTypeFilter.all,
+                                child: Text(
+                                  'All Songs',
+                                  style: TextStyle(fontSize: 13), // Reduced from 15 to 13
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: SongTypeFilter.fast,
+                                child: Text(
+                                  'Fast Songs',
+                                  style: TextStyle(fontSize: 13), // Reduced from 15 to 13
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: SongTypeFilter.slow,
+                                child: Text(
+                                  'Slow Songs',
+                                  style: TextStyle(fontSize: 13), // Reduced from 15 to 13
+                                ),
+                              ),
+                            ],
+                            style: TextStyle(
+                              color: black,
+                              fontSize: 13, // Reduced from 15 to 13
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
                   // Search bar
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      color: white,
+                      borderRadius: BorderRadius.circular(24), // Reduced from 28 to 24
                       border: Border.all(
-                        color: _isSearchFocused ? Colors.black : Colors.black12,
+                        color: _isSearchFocused ? black : lightGray2,
                         width: _isSearchFocused ? 2 : 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          color: _isSearchFocused
+                              ? black.withOpacity(0.2)
+                              : black.withOpacity(0.1),
+                          blurRadius: _isSearchFocused ? 14 : 6, // Reduced from 16 to 14 and 8 to 6
+                          offset: const Offset(0, 3), // Reduced from 4 to 3
                         ),
                       ],
                     ),
@@ -505,38 +457,38 @@ class _SongListPageState extends State<SongListPage> {
                       },
                       child: TextField(
                         controller: _searchController,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
+                        style: TextStyle(
+                          color: black,
+                          fontSize: 14, // Reduced from 16 to 14
                           fontWeight: FontWeight.w500,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Search songs...',
-                          hintStyle: const TextStyle(
-                            color: Colors.black38,
-                            fontSize: 16,
+                          hintText: 'Search your favorite songs...',
+                          hintStyle: TextStyle(
+                            color: darkGray2.withOpacity(0.7),
+                            fontSize: 14, // Reduced from 16 to 14
                             fontWeight: FontWeight.w400,
                           ),
                           prefixIcon: Container(
-                            padding: const EdgeInsets.all(12),
-                            child: const Icon(
+                            padding: const EdgeInsets.all(10), // Reduced from 12 to 10
+                            child: Icon(
                               Icons.search,
-                              color: Colors.black54,
-                              size: 22,
+                              color: _isSearchFocused ? black : darkGray2,
+                              size: 20, // Reduced from 24 to 20
                             ),
                           ),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? IconButton(
                             icon: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.black,
+                              padding: const EdgeInsets.all(5), // Reduced from 6 to 5
+                              decoration: BoxDecoration(
+                                color: darkGray2,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 Icons.clear,
-                                color: Colors.white,
-                                size: 16,
+                                color: white,
+                                size: 14, // Reduced from 16 to 14
                               ),
                             ),
                             onPressed: () {
@@ -546,8 +498,8 @@ class _SongListPageState extends State<SongListPage> {
                               : null,
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
+                            horizontal: 16, // Reduced from 20 to 16
+                            vertical: 16, // Reduced from 20 to 16
                           ),
                         ),
                       ),
@@ -556,22 +508,30 @@ class _SongListPageState extends State<SongListPage> {
                 ],
               ),
             ),
+
             // Selection Mode Top Bar
             if (_isSelectionMode && auth.isAdmin)
               Container(
-                margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                margin: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                 decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.black12),
+                  color: white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: lightGray2, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: black.withOpacity(0.1),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.delete,
-                      color: Colors.black,
-                      size: 20,
+                    Icon(
+                      Icons.delete_outline,
+                      color: darkGray2,
+                      size: 24,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -579,9 +539,9 @@ class _SongListPageState extends State<SongListPage> {
                         _selectedSongs.isEmpty
                             ? 'Select songs to delete'
                             : '${_selectedSongs.length} ${_selectedSongs.length == 1 ? 'song' : 'songs'} selected',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 15,
+                        style: TextStyle(
+                          color: black,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -589,20 +549,31 @@ class _SongListPageState extends State<SongListPage> {
                     if (_selectedSongs.isNotEmpty)
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [darkGray1, darkGray2],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: black.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: TextButton(
                           onPressed: () => _showDeleteConfirmDialog(context, repo),
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            foregroundColor: white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           ),
                           child: const Text(
                             'Delete',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -610,20 +581,21 @@ class _SongListPageState extends State<SongListPage> {
                     const SizedBox(width: 12),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(12),
+                        color: white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: lightGray2, width: 1),
                       ),
                       child: TextButton(
                         onPressed: _toggleSelectionMode,
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.black54,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          foregroundColor: black,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         ),
                         child: const Text(
                           'Cancel',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            fontSize: 15,
                           ),
                         ),
                       ),
@@ -631,31 +603,32 @@ class _SongListPageState extends State<SongListPage> {
                   ],
                 ),
               ),
+
             // Songs List
             Expanded(
               child: StreamBuilder<List<Song>>(
                 stream: repo.songsStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
+                    return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(
-                            width: 40,
-                            height: 40,
+                            width: 50,
+                            height: 50,
                             child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                              strokeWidth: 3,
+                              valueColor: AlwaysStoppedAnimation<Color>(darkGray2),
+                              strokeWidth: 4,
                             ),
                           ),
-                          SizedBox(height: 24),
+                          const SizedBox(height: 24),
                           Text(
-                            'Loading songs...',
+                            'Loading your songs...',
                             style: TextStyle(
-                              color: Colors.black54,
+                              color: darkGray2,
                               fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -669,31 +642,42 @@ class _SongListPageState extends State<SongListPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(20),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [darkGray1, darkGray2],
+                              ),
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: black.withOpacity(0.3),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: const Icon(
                               Icons.error_outline,
-                              color: Colors.white,
-                              size: 40,
+                              color: white,
+                              size: 48,
                             ),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                          Text(
                             'Something went wrong',
                             style: TextStyle(
-                              color: Colors.black,
+                              color: black,
                               fontSize: 20,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Please try again later',
                             style: TextStyle(
-                              color: Colors.black54,
+                              color: darkGray2,
                               fontSize: 15,
                             ),
                           ),
@@ -703,7 +687,12 @@ class _SongListPageState extends State<SongListPage> {
                   }
 
                   final allSongs = snapshot.data ?? [];
-                  final filteredSongs = _filterSongs(allSongs);
+                  final filteredSongs = filterSongs(
+                    allSongs,
+                    languageFilter: _languageFilter,
+                    typeFilter:     _typeFilter,
+                    searchQuery:    _searchQuery,
+                  );
 
                   if (allSongs.isEmpty) {
                     return Center(
@@ -711,24 +700,35 @@ class _SongListPageState extends State<SongListPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(20),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [darkGray1, darkGray2],
+                              ),
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: black.withOpacity(0.3),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: const Icon(
                               Icons.music_off,
-                              color: Colors.white,
-                              size: 40,
+                              color: white,
+                              size: 48,
                             ),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                          Text(
                             'No songs available',
                             style: TextStyle(
-                              color: Colors.black,
+                              color: black,
                               fontSize: 20,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -736,8 +736,8 @@ class _SongListPageState extends State<SongListPage> {
                             auth.isAdmin
                                 ? 'Use the menu to add your first song!'
                                 : 'Check back later for new songs',
-                            style: const TextStyle(
-                              color: Colors.black54,
+                            style: TextStyle(
+                              color: darkGray2,
                               fontSize: 15,
                             ),
                           ),
@@ -752,31 +752,42 @@ class _SongListPageState extends State<SongListPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(20),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [darkGray1, darkGray2],
+                              ),
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: black.withOpacity(0.3),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: const Icon(
                               Icons.search_off,
-                              color: Colors.white,
-                              size: 40,
+                              color: white,
+                              size: 48,
                             ),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                          Text(
                             'No songs found',
                             style: TextStyle(
-                              color: Colors.black,
+                              color: black,
                               fontSize: 20,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Try different keywords for "$_searchQuery"',
-                            style: const TextStyle(
-                              color: Colors.black54,
+                            style: TextStyle(
+                              color: darkGray2,
                               fontSize: 15,
                             ),
                             textAlign: TextAlign.center,
@@ -791,31 +802,48 @@ class _SongListPageState extends State<SongListPage> {
                       // Status bar
                       if (!_isSelectionMode)
                         Container(
-                          margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          margin: const EdgeInsets.fromLTRB(24, 12, 24, 12), // Reduced from 16 to 12
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), // Reduced from 24, 18 to 20, 14
                           decoration: BoxDecoration(
-                            color: auth.isAdmin ? Colors.black : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
+                            gradient: auth.isAdmin
+                                ? LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [darkGray1, darkGray2],
+                            )
+                                : LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [white, lightGray2],
+                            ),
+                            borderRadius: BorderRadius.circular(20), // Reduced from 24 to 20
                             border: Border.all(
-                              color: auth.isAdmin ? Colors.black : Colors.black12,
+                              color: auth.isAdmin ? darkGray1 : lightGray2,
                               width: 1,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: black.withOpacity(0.1),
+                                blurRadius: 10, // Reduced from 12 to 10
+                                offset: const Offset(0, 3), // Reduced from 4 to 3
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 auth.isAdmin ? Icons.admin_panel_settings : Icons.library_music,
-                                color: auth.isAdmin ? Colors.white : Colors.black,
-                                size: 20,
+                                color: auth.isAdmin ? white : black,
+                                size: 20, // Reduced from 24 to 20
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10), // Reduced from 12 to 10
                               Text(
                                 auth.isAdmin
                                     ? 'Admin Mode Active'
                                     : _getStatusText(filteredSongs.length, allSongs.length),
                                 style: TextStyle(
-                                  color: auth.isAdmin ? Colors.white : Colors.black,
-                                  fontSize: 15,
+                                  color: auth.isAdmin ? white : black,
+                                  fontSize: 14, // Reduced from 16 to 14
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -824,143 +852,232 @@ class _SongListPageState extends State<SongListPage> {
                         ),
                       // Songs list
                       Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 20), // Add bottom padding for navbar
+                        child: Container(
+                          color: Colors.transparent,
                           child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            padding: EdgeInsets.only(
+                              left: 24,
+                              right: 24,
+                              bottom: 10, // Integrate the bottom padding here
+                            ),
                             itemCount: filteredSongs.length,
-                            itemBuilder: (context, index) {
-                              final song = filteredSongs[index];
-                              final isSelected = _selectedSongs.contains(song.id);
+                              itemBuilder: (context, index) {
+                                final song = filteredSongs[index];
+                                final isSelected = _selectedSongs.contains(song.id);
 
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12), // Reduced from 16 to 12
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16), // Reduced from 20 to 16
-                                  border: Border.all(
-                                    color: isSelected ? Colors.black : Colors.black12,
-                                    width: isSelected ? 2 : 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.06), // Reduced shadow opacity
-                                      blurRadius: 12, // Reduced from 16 to 12
-                                      offset: const Offset(0, 3), // Reduced from 4 to 3
+                                // Adjust the margin for the last item to include the bottom padding
+                                EdgeInsets itemMargin = const EdgeInsets.only(bottom: 12); // Reduced from 16 to 12
+                                if (index == filteredSongs.length - 1) {
+                                  itemMargin = const EdgeInsets.only(bottom: 0); // No additional margin for the last item
+                                }
+
+                                return Container(
+                                  margin: itemMargin,
+                                  decoration: BoxDecoration(
+                                    color: white,
+                                    borderRadius: BorderRadius.circular(20), // Reduced from 24 to 20
+                                    border: Border.all(
+                                      color: isSelected ? black : lightGray2,
+                                      width: isSelected ? 2 : 1,
                                     ),
-                                  ],
-                                ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(16),
-                                    onTap: () {
-                                      if (_isSelectionMode && auth.isAdmin) {
-                                        _toggleSongSelection(song.id);
-                                      } else {
-                                        Navigator.push(
-                                          context,
-                                          FadePageRoute(
-                                            builder: (_) => SongDetailPage(song: song),
-                                          ),
-                                        );
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isSelected
+                                            ? black.withOpacity(0.2)
+                                            : black.withOpacity(0.08),
+                                        blurRadius: isSelected ? 16 : 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(20), // Reduced from 24 to 20
+                                      onTap: () {
+                                        if (_isSelectionMode && auth.isAdmin) {
+                                          _toggleSongSelection(song.id);
+                                        } else {
+                                          Navigator.push(
+                                            context,
+                                            FadePageRoute(
+                                              builder: (_) => SongDetailPage(song: song),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      onLongPress: auth.isAdmin
+                                          ? () {
+                                        if (!_isSelectionMode) {
+                                          setState(() {
+                                            _isSelectionMode = true;
+                                            _selectedSongs.add(song.id);
+                                          });
+                                        }
                                       }
-                                    },
-                                    onLongPress: auth.isAdmin
-                                        ? () {
-                                      if (!_isSelectionMode) {
-                                        setState(() {
-                                          _isSelectionMode = true;
-                                          _selectedSongs.add(song.id);
-                                        });
-                                      }
-                                    }
-                                        : null,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(18), // Reduced from 24 to 18
-                                      child: Row(
-                                        children: [
-                                          // Selection indicator or music icon
-                                          if (_isSelectionMode && auth.isAdmin)
-                                            Container(
-                                              width: 48, // Reduced from 60 to 48
-                                              height: 48, // Reduced from 60 to 48
-                                              decoration: BoxDecoration(
-                                                color: isSelected ? Colors.black : Colors.grey.shade200,
-                                                borderRadius: BorderRadius.circular(14), // Reduced from 18 to 14
-                                                border: Border.all(
-                                                  color: isSelected ? Colors.black : Colors.grey.shade300,
-                                                  width: 2,
-                                                ),
-                                              ),
-                                              child: Icon(
-                                                isSelected ? Icons.check : Icons.music_note,
-                                                color: isSelected ? Colors.white : Colors.grey.shade600,
-                                                size: 24, // Reduced from 30 to 24
-                                              ),
-                                            )
-                                          else
-                                            Container(
-                                              width: 48, // Reduced from 60 to 48
-                                              height: 48, // Reduced from 60 to 48
-                                              decoration: BoxDecoration(
-                                                color: Colors.black,
-                                                borderRadius: BorderRadius.circular(14), // Reduced from 18 to 14
-                                              ),
-                                              child: const Icon(
-                                                Icons.music_note,
-                                                color: Colors.white,
-                                                size: 24, // Reduced from 30 to 24
-                                              ),
-                                            ),
-                                          const SizedBox(width: 16), // Reduced from 20 to 16
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '${song.title}  –  ${song.creator}',
-                                                  style: const TextStyle(
-                                                    color: Colors.black,
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                    letterSpacing: -0.3,
+                                          : null,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16), // Reduced from 24 to 16
+                                        child: Row(
+                                          children: [
+                                            if (_isSelectionMode && auth.isAdmin)
+                                              Container(
+                                                width: 20, // Reduced from 24 to 20
+                                                height: 20, // Reduced from 24 to 20
+                                                decoration: BoxDecoration(
+                                                  color: isSelected ? black : Colors.transparent,
+                                                  border: Border.all(
+                                                    color: isSelected ? black : darkGray2,
+                                                    width: 2,
                                                   ),
+                                                  borderRadius: BorderRadius.circular(6), // Reduced from 8 to 6
                                                 ),
-                                                const SizedBox(height: 3), // Reduced from 4 to 3
-                                                Text(
-                                                  _isSelectionMode && auth.isAdmin
-                                                      ? 'Tap to select/deselect'
-                                                      : 'Tap to view chords',
-                                                  style: const TextStyle(
-                                                    color: Colors.black54,
-                                                    fontSize: 13, // Reduced from 14 to 13
-                                                    fontWeight: FontWeight.w400,
+                                                child: isSelected
+                                                    ? const Icon(
+                                                  Icons.check,
+                                                  color: white,
+                                                  size: 14, // Reduced from 16 to 14
+                                                )
+                                                    : null,
+                                              )
+                                            else
+                                              Container(
+                                                padding: const EdgeInsets.all(12), // Reduced from 16 to 12
+                                                decoration: BoxDecoration(
+                                                  gradient: const LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [darkGray1, darkGray2],
                                                   ),
+                                                  borderRadius: BorderRadius.circular(16), // Reduced from 20 to 16
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: black.withOpacity(0.3),
+                                                      blurRadius: 10, // Reduced from 12 to 10
+                                                      offset: const Offset(0, 3), // Reduced from 4 to 3
+                                                    ),
+                                                  ],
                                                 ),
-                                              ],
-                                            ),
-                                          ),
-                                          if (!_isSelectionMode)
-                                            Container(
-                                              padding: const EdgeInsets.all(7), // Reduced from 8 to 7
-                                              decoration: BoxDecoration(
-                                                color: Colors.black,
-                                                borderRadius: BorderRadius.circular(10), // Reduced from 12 to 10
+                                                child: const Icon(
+                                                  Icons.music_note,
+                                                  color: white,
+                                                  size: 20, // Reduced from 24 to 20
+                                                ),
                                               ),
-                                              child: const Icon(
-                                                Icons.chevron_right,
-                                                color: Colors.white,
-                                                size: 18, // Reduced from 20 to 18
+                                            const SizedBox(width: 16), // Reduced from 20 to 16
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    song.title,
+                                                    style: TextStyle(
+                                                      color: black,
+                                                      fontSize: 16, // Reduced from 18 to 16
+                                                      fontWeight: FontWeight.w700,
+                                                      letterSpacing: -0.5,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 4), // Reduced from 6 to 4
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(
+                                                          horizontal: 10, // Reduced from 12 to 10
+                                                          vertical: 4, // Reduced from 6 to 4
+                                                        ),
+                                                        decoration: BoxDecoration(
+                                                          color: lightGray2,
+                                                          borderRadius: BorderRadius.circular(14), // Reduced from 16 to 14
+                                                          border: Border.all(
+                                                            color: lightGray1,
+                                                            width: 1,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          song.creator,
+                                                          style: TextStyle(
+                                                            color: black,
+                                                            fontSize: 12, // Reduced from 13 to 12
+                                                            fontWeight: FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 6), // Reduced from 8 to 6
+                                                      if (song.language != null)
+                                                        Flexible(
+                                                          child: Container(
+                                                            padding: const EdgeInsets.symmetric(
+                                                              horizontal: 8, // Reduced from 10 to 8
+                                                              vertical: 3, // Reduced from 4 to 3
+                                                            ),
+                                                            decoration: BoxDecoration(
+                                                              color: darkGray2,
+                                                              borderRadius: BorderRadius.circular(10), // Reduced from 12 to 10
+                                                            ),
+                                                            child: Text(
+                                                              song.language!.toUpperCase(),
+                                                              style: const TextStyle(
+                                                                color: white,
+                                                                fontSize: 10, // Reduced from 11 to 10
+                                                                fontWeight: FontWeight.w700,
+                                                                letterSpacing: 0.5,
+                                                              ),
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      if (song.type != null)
+                                                        Flexible(
+                                                          child: Container(
+                                                            margin: const EdgeInsets.only(left: 6), // Reduced from 8 to 6
+                                                            padding: const EdgeInsets.symmetric(
+                                                              horizontal: 8, // Reduced from 10 to 8
+                                                              vertical: 3, // Reduced from 4 to 3
+                                                            ),
+                                                            decoration: BoxDecoration(
+                                                              color: black,
+                                                              borderRadius: BorderRadius.circular(10), // Reduced from 12 to 10
+                                                            ),
+                                                            child: Text(
+                                                              song.type!.toUpperCase(),
+                                                              style: const TextStyle(
+                                                                color: white,
+                                                                fontSize: 10, // Reduced from 11 to 10
+                                                                fontWeight: FontWeight.w700,
+                                                                letterSpacing: 0.5,
+                                                              ),
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                        ],
+                                            if (!_isSelectionMode)
+                                              Container(
+                                                padding: const EdgeInsets.all(6), // Reduced from 8 to 6
+                                                decoration: BoxDecoration(
+                                                  color: lightGray2,
+                                                  borderRadius: BorderRadius.circular(10), // Reduced from 12 to 10
+                                                ),
+                                                child: Icon(
+                                                  Icons.arrow_forward_ios,
+                                                  color: darkGray2,
+                                                  size: 14, // Reduced from 16 to 14
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              }
                           ),
                         ),
                       ),
@@ -972,164 +1089,265 @@ class _SongListPageState extends State<SongListPage> {
           ],
         ),
       ),
-      // Add the bottom navigation bar
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentNavIndex,
         onTap: _onNavItemTapped,
       ),
     );
   }
-}
 
-class CustomSongDeleteDialog extends StatelessWidget {
-  final int selectedCount;
-  final VoidCallback onDelete;
-  final VoidCallback onCancel;
+  // Add this method to handle bottom navigation
+  void _onNavItemTapped(int index) {
+    setState(() {
+      _currentNavIndex = index;
+    });
 
-  const CustomSongDeleteDialog({
-    super.key,
-    required this.selectedCount,
-    required this.onDelete,
-    required this.onCancel,
-  });
+    switch (index) {
+      case 0:
+        break;
+      case 1:
+        Navigator.push(
+          context,
+          FadePageRoute(builder: (_) => const AlbumsPage()),
+        );
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          FadePageRoute(builder: (_) => const BookmarkPage()),
+        );
+        break;
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 32),
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-            ],
+  void _onFilterChanged(SongLanguageFilter? newFilter) {
+    if (newFilter != null) {
+      setState(() {
+        _languageFilter = newFilter;
+      });
+    }
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      _selectedSongs.clear();
+    });
+  }
+
+  void _toggleSongSelection(String songId) {
+    setState(() {
+      if (_selectedSongs.contains(songId)) {
+        _selectedSongs.remove(songId);
+      } else {
+        _selectedSongs.add(songId);
+      }
+    });
+  }
+
+  String _getStatusText(int filteredCount, int totalCount) {
+    if (filteredCount == totalCount) {
+      return 'Showing all $totalCount songs';
+    } else {
+      return 'Showing $filteredCount of $totalCount songs';
+    }
+  }
+
+  void _showLogoutDialog(BuildContext context, AuthService auth) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          title: Row(
             children: [
-              // Warning Icon
               Container(
-                width: 80,
-                height: 80,
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  Icons.delete_outline_rounded,
-                  color: Colors.white,
-                  size: 42,
+                  Icons.logout,
+                  color: white,
+                  size: 20,
                 ),
               ),
-              const SizedBox(height: 28),
-
-              // Title
-              const Text(
-                'Delete Songs?',
+              const SizedBox(width: 12),
+              Text(
+                'Logout',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black,
-                  letterSpacing: -0.8,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Song count highlight
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black12),
-                ),
-                child: Text(
-                  '$selectedCount ${selectedCount == 1 ? 'song' : 'songs'} selected',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Message
-              const Text(
-                'This action cannot be undone. The selected songs will be permanently removed from the collection.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  height: 1.5,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 36),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: onCancel,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.black12, width: 2),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: onDelete,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Text(
-                          'Delete',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
-        ),
-      ),
+          content: Text(
+            'Are you sure you want to logout from admin mode?',
+            style: TextStyle(
+              fontSize: 15,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Cancel'),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TextButton(
+                onPressed: () {
+                  auth.logout();
+                  Navigator.of(context).pop();
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Logout'),
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext context, SongRepository repo) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.delete,
+                  color: white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Delete Songs',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete ${_selectedSongs.length} ${_selectedSongs.length == 1 ? 'song' : 'songs'}? This action cannot be undone.',
+            style: TextStyle(
+              fontSize: 15,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Cancel'),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  for (String songId in _selectedSongs) {
+                    await repo.deleteSong(songId);
+                  }
+                  _toggleSelectionMode();
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Delete'),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<Song> filterSongs(
+      List<Song> songs, {
+        required SongLanguageFilter languageFilter,
+        required SongTypeFilter typeFilter,
+        required String searchQuery,
+      }) {
+    var filtered = songs;
+
+    // 1) Language filter
+    switch (languageFilter) {
+      case SongLanguageFilter.tagalog:
+        filtered = filtered
+            .where((s) => s.language == 'tagalog')
+            .toList();
+        break;
+      case SongLanguageFilter.english:
+        filtered = filtered
+            .where((s) => s.language == 'english')
+            .toList();
+        break;
+      case SongLanguageFilter.all:
+        break;
+    }
+
+    // 2) Type filter
+    switch (typeFilter) {
+      case SongTypeFilter.fast:
+        filtered = filtered
+            .where((s) => s.type == 'fast song' || s.type == 'fast')
+            .toList();
+        break;
+      case SongTypeFilter.slow:
+        filtered = filtered
+            .where((s) => s.type == 'slow song' || s.type == 'slow')
+            .toList();
+        break;
+      case SongTypeFilter.all:
+        break;
+    }
+
+    // 3) Title search filter (case‑insensitive)
+    final q = searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      filtered = filtered
+          .where((s) => s.title.toLowerCase().contains(q))
+          .toList();
+    }
+
+    return filtered;
   }
 }

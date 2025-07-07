@@ -3,6 +3,15 @@ import 'package:provider/provider.dart';
 import '../Services/song_repository.dart';
 import '../Models/songs.dart';
 
+class AppColors {
+  static const Color black = Color(0xFF000000);
+  static const Color darkGray1 = Color(0xFF1F1F1F);
+  static const Color darkGray2 = Color(0xFF242424);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGray1 = Color(0xFFF2F2F2);
+  static const Color lightGray2 = Color(0xFFE2E2E2);
+}
+
 class AddSongPage extends StatefulWidget {
   const AddSongPage({super.key});
 
@@ -51,11 +60,11 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _animationController.forward();
 
@@ -68,6 +77,12 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
   @override
   void dispose() {
     _animationController.dispose();
+    _title.dispose();
+    _lyrics.dispose();
+    _creator.dispose();
+    for (final controller in _chordSections.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -76,19 +91,20 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: AppColors.black.withOpacity(0.8),
       builder: (_) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(28),
+          margin: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
+                color: AppColors.black.withOpacity(0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -97,9 +113,9 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Add Section',
+                'Add New Section',
                 style: TextStyle(
-                  color: Colors.black,
+                  color: AppColors.black,
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
@@ -109,18 +125,18 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
               const Text(
                 'Choose from common sections:',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: AppColors.darkGray1,
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 12),
               Container(
                 height: 200,
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: AppColors.lightGray1,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
+                  border: Border.all(color: AppColors.lightGray2),
                 ),
                 child: ListView.builder(
                   padding: const EdgeInsets.all(8),
@@ -147,10 +163,10 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
-                              color: isAlreadyAdded ? Colors.grey[200] : Colors.white,
+                              color: isAlreadyAdded ? AppColors.lightGray2 : AppColors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isAlreadyAdded ? Colors.grey[300]! : Colors.grey[200]!,
+                                color: isAlreadyAdded ? AppColors.lightGray2 : AppColors.lightGray1,
                               ),
                             ),
                             child: Row(
@@ -159,14 +175,14 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                                   child: Text(
                                     section,
                                     style: TextStyle(
-                                      color: isAlreadyAdded ? Colors.grey[500] : Colors.black,
+                                      color: isAlreadyAdded ? AppColors.darkGray1.withOpacity(0.6) : AppColors.black,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
                                 if (isAlreadyAdded)
-                                  Icon(Icons.check_circle, color: Colors.grey[400], size: 20),
+                                  Icon(Icons.check_circle, color: AppColors.darkGray1.withOpacity(0.6), size: 20),
                               ],
                             ),
                           ),
@@ -180,28 +196,28 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
               const Text(
                 'Or create a custom section:',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: AppColors.darkGray1,
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: AppColors.lightGray1,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
+                  border: Border.all(color: AppColors.lightGray2),
                 ),
                 child: TextField(
                   controller: controller,
                   style: const TextStyle(
-                    color: Colors.black,
+                    color: AppColors.black,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Custom section name',
-                    hintStyle: TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: AppColors.darkGray1),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.all(20),
                   ),
@@ -214,8 +230,10 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                     child: TextButton(
                       onPressed: () => Navigator.pop(context),
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey[600],
+                        foregroundColor: AppColors.darkGray1,
+                        backgroundColor: AppColors.lightGray1,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
@@ -234,9 +252,10 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                         Navigator.pop(context);
                       },
                       style: TextButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.black,
+                        foregroundColor: AppColors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: const Text('Add Custom', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
@@ -252,6 +271,7 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
 
   void _removeSection(String section) {
     setState(() {
+      _chordSections[section]?.dispose();
       _chordSections.remove(section);
       _sectionOrder.remove(section);
     });
@@ -262,12 +282,13 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
     final repo = context.read<SongRepository>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: SafeArea(
           child: Column(
             children: [
+              // Header
               Container(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                 child: Row(
@@ -275,13 +296,18 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
-                        width: 44,
-                        height: 44,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(22),
+                          color: AppColors.lightGray1,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.lightGray2),
                         ),
-                        child: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: AppColors.black,
+                          size: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -289,7 +315,7 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                       child: Text(
                         'Create Song',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: AppColors.black,
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.8,
@@ -300,49 +326,78 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                 ),
               ),
               const SizedBox(height: 32),
+
+              // Content
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Song Title
                       _buildSectionHeader('Song Title'),
                       const SizedBox(height: 12),
-                      _buildModernTextField(controller: _title, hintText: 'Enter song title', maxLines: 1),
+                      _buildModernTextField(
+                        controller: _title,
+                        hintText: 'Enter song title',
+                        maxLines: 1,
+                      ),
 
-                      const SizedBox(height: 20),
+                      // Creator
+                      const SizedBox(height: 24),
                       _buildSectionHeader('Creator'),
                       const SizedBox(height: 12),
-                      _buildModernTextField(controller: _creator, hintText: 'Enter creator name', maxLines: 1),
-
-                      // Language Dropdown
-                      const SizedBox(height: 20),
-                      _buildSectionHeader('Language'),
-                      const SizedBox(height: 12),
-                      _buildDropdown(
-                        value: _selectedLanguage,
-                        options: _languageOptions,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedLanguage = value!;
-                          });
-                        },
+                      _buildModernTextField(
+                        controller: _creator,
+                        hintText: 'Enter creator name',
+                        maxLines: 1,
                       ),
 
-                      // Type Dropdown
-                      const SizedBox(height: 20),
-                      _buildSectionHeader('Type'),
-                      const SizedBox(height: 12),
-                      _buildDropdown(
-                        value: _selectedType,
-                        options: _typeOptions,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedType = value!;
-                          });
-                        },
+                      // Language and Type Row
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader('Language'),
+                                const SizedBox(height: 12),
+                                _buildDropdown(
+                                  value: _selectedLanguage,
+                                  options: _languageOptions,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedLanguage = value!;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader('Type'),
+                                const SizedBox(height: 12),
+                                _buildDropdown(
+                                  value: _selectedType,
+                                  options: _typeOptions,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedType = value!;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
 
+                      // Chord Sections
                       const SizedBox(height: 40),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -351,30 +406,40 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                           GestureDetector(
                             onTap: _addNewSection,
                             child: Container(
-                              width: 44,
-                              height: 44,
+                              width: 48,
+                              height: 48,
                               decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(22),
+                                color: AppColors.black,
+                                borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
+                                  BoxShadow(
+                                    color: AppColors.black.withOpacity(0.2),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
                                 ],
                               ),
-                              child: const Icon(Icons.add, color: Colors.white, size: 20),
+                              child: const Icon(
+                                Icons.add,
+                                color: AppColors.white,
+                                size: 24,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 20),
+
+                      // Chord Section Cards
                       ..._sectionOrder.map((section) {
                         final controller = _chordSections[section]!;
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 24),
+                          margin: const EdgeInsets.only(bottom: 20),
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: Colors.grey[50],
+                            color: AppColors.lightGray1,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey[200]!),
+                            border: Border.all(color: AppColors.lightGray2),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,23 +447,30 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(section,
-                                      style: const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: -0.3)),
+                                  Text(
+                                    section,
+                                    style: const TextStyle(
+                                      color: AppColors.black,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
                                   GestureDetector(
                                     onTap: () => _removeSection(section),
                                     child: Container(
-                                      width: 32,
-                                      height: 32,
+                                      width: 36,
+                                      height: 36,
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.grey[300]!),
+                                        color: AppColors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: AppColors.lightGray2),
                                       ),
-                                      child: Icon(Icons.close, color: Colors.grey[600], size: 16),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: AppColors.darkGray1,
+                                        size: 18,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -406,21 +478,21 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                               const SizedBox(height: 16),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey[200]!),
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.lightGray2),
                                 ),
                                 child: TextField(
                                   controller: controller,
                                   style: const TextStyle(
                                     fontFamily: 'monospace',
                                     fontSize: 14,
-                                    color: Colors.black,
+                                    color: AppColors.black,
                                     height: 1.6,
                                   ),
                                   decoration: const InputDecoration(
                                     hintText: 'Enter chords...',
-                                    hintStyle: TextStyle(color: Colors.grey),
+                                    hintStyle: TextStyle(color: AppColors.darkGray1),
                                     border: InputBorder.none,
                                     contentPadding: EdgeInsets.all(16),
                                   ),
@@ -433,19 +505,32 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                         );
                       }),
 
-                      const SizedBox(height: 20),
+                      // Lyrics
+                      const SizedBox(height: 24),
                       _buildSectionHeader('Lyrics'),
                       const SizedBox(height: 12),
-                      _buildModernTextField(controller: _lyrics, hintText: 'Enter song lyrics...', maxLines: null, minLines: 8),
+                      _buildModernTextField(
+                        controller: _lyrics,
+                        hintText: 'Enter song lyrics...',
+                        maxLines: null,
+                        minLines: 8,
+                      ),
 
+                      // Save Button
                       const SizedBox(height: 40),
                       Container(
                         width: double.infinity,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: AppColors.black,
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 30, offset: const Offset(0, 15))],
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.black.withOpacity(0.3),
+                              blurRadius: 30,
+                              offset: const Offset(0, 15),
+                            ),
+                          ],
                         ),
                         child: TextButton(
                           onPressed: () async {
@@ -470,12 +555,14 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
                             if (context.mounted) Navigator.pop(context);
                           },
                           style: TextButton.styleFrom(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
                           child: const Text(
                             'Save Song',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.3,
@@ -499,7 +586,7 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
     return Text(
       title,
       style: const TextStyle(
-        color: Colors.black,
+        color: AppColors.black,
         fontSize: 20,
         fontWeight: FontWeight.w800,
         letterSpacing: -0.5,
@@ -515,21 +602,20 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: AppColors.lightGray1,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: AppColors.lightGray2),
       ),
       child: TextField(
         controller: controller,
         style: const TextStyle(
-          fontFamily: 'monospace',
           fontSize: 16,
-          color: Colors.black,
+          color: AppColors.black,
           height: 1.5,
         ),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.grey),
+          hintStyle: const TextStyle(color: AppColors.darkGray1),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(20),
         ),
@@ -539,7 +625,6 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
     );
   }
 
-  // Dropdown builder method
   Widget _buildDropdown({
     required String value,
     required List<String> options,
@@ -547,9 +632,9 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: AppColors.lightGray1,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: AppColors.lightGray2),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -557,7 +642,13 @@ class _AddSongPageState extends State<AddSongPage> with TickerProviderStateMixin
           value: value,
           isExpanded: true,
           underline: Container(),
-          icon: const Icon(Icons.arrow_drop_down),
+          icon: const Icon(Icons.arrow_drop_down, color: AppColors.black),
+          style: const TextStyle(
+            color: AppColors.black,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+          dropdownColor: AppColors.white,
           items: options.map((String value) {
             return DropdownMenuItem<String>(
               value: value,

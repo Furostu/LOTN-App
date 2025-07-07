@@ -1,5 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Which language(s) to show
+enum SongLanguageFilter {
+  all,
+  tagalog,
+  english,
+}
+
+/// Which song type(s) to show
+enum SongTypeFilter {
+  all,
+  fast,
+  slow,
+}
+
 class Song {
   final String id;
   final String title;
@@ -7,8 +21,8 @@ class Song {
   final String lyrics;
   final List<String> sectionOrder;
   final String creator;
-  final String language; // NEW FIELD
-  final String type;     // NEW FIELD
+  final String language;
+  final String type;
 
   Song({
     required this.id,
@@ -17,26 +31,41 @@ class Song {
     required this.lyrics,
     required this.sectionOrder,
     required this.creator,
-    required this.language, // NEW
-    required this.type,     // NEW
+    required this.language,
+    required this.type,
   });
 
+  /// Create a Song from a Firestore document.
   factory Song.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // Normalize language and type to lowercase, or empty if missing
+    final rawLang = (data['language'] as String?)
+        ?.trim()
+        .toLowerCase() ??
+        '';
+    final rawType = (data['type'] as String?)
+        ?.trim()
+        .toLowerCase() ??
+        '';
+
     return Song(
       id: doc.id,
       title: data['title'] ?? '',
       chords: Map<String, String>.from(data['chords'] ?? {}),
       lyrics: data['lyrics'] ?? '',
       sectionOrder: List<String>.from(
-        data['sectionOrder'] ?? (data['chords'] ?? {}).keys,
+        data['sectionOrder'] ??
+            (data['chords'] as Map<String, dynamic>?)?.keys.toList() ??
+            [],
       ),
       creator: data['creator'] ?? '',
-      language: data['language'] ?? 'English', // NEW with default
-      type: data['type'] ?? 'Fast Song',       // NEW with default
+      language: rawLang,
+      type: rawType,
     );
   }
 
+  /// Prepare data for writing back to Firestore.
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -44,8 +73,8 @@ class Song {
       'lyrics': lyrics,
       'sectionOrder': sectionOrder,
       'creator': creator,
-      'language': language, // NEW
-      'type': type,         // NEW
+      'language': language,
+      'type': type,
     };
   }
 }

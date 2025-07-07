@@ -21,9 +21,16 @@ class _BookmarkPageState extends State<BookmarkPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearchFocused = false;
-  int _currentNavIndex = 2; // Set to 1 for bookmarks tab
+  int _currentNavIndex = 2;
   List<String> _bookmarkedSongIds = [];
   bool _isLoading = true;
+
+  static const Color black = Color(0xFF000000);
+  static const Color darkGray1 = Color(0xFF1F1F1F);
+  static const Color darkGray2 = Color(0xFF242424);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGray1 = Color(0xFFF2F2F2);
+  static const Color lightGray2 = Color(0xFFE2E2E2);
 
   @override
   void initState() {
@@ -42,7 +49,6 @@ class _BookmarkPageState extends State<BookmarkPage> {
     super.dispose();
   }
 
-  // Load bookmarked song IDs from SharedPreferences
   Future<void> _loadBookmarks() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -59,7 +65,6 @@ class _BookmarkPageState extends State<BookmarkPage> {
     }
   }
 
-  // Filter songs based on search query
   List<Song> _filterSongs(List<Song> songs) {
     if (_searchQuery.isEmpty) return songs;
     return songs.where((song) {
@@ -67,14 +72,10 @@ class _BookmarkPageState extends State<BookmarkPage> {
     }).toList();
   }
 
-  // Handle bottom navigation
   void _onNavItemTapped(int index) {
-    setState(() {
-      _currentNavIndex = index;
-    });
+    if (index == _currentNavIndex) return;
     switch (index) {
       case 0:
-      // Songs tab — replace BookmarkPage with SongListPage (index 0)
         Navigator.pushReplacement(
           context,
           FadePageRoute(
@@ -89,12 +90,13 @@ class _BookmarkPageState extends State<BookmarkPage> {
         );
         break;
       case 2:
-
         break;
     }
+    setState(() {
+      _currentNavIndex = index;
+    });
   }
 
-  // Remove bookmark
   Future<void> _removeBookmark(String songId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -105,7 +107,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
         _bookmarkedSongIds.remove(songId);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Removed from bookmarks'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.black87,
@@ -116,7 +118,6 @@ class _BookmarkPageState extends State<BookmarkPage> {
     }
   }
 
-  // Show remove bookmark confirmation dialog
   void _showRemoveBookmarkDialog(Song song) {
     showDialog(
       context: context,
@@ -145,168 +146,140 @@ class _BookmarkPageState extends State<BookmarkPage> {
   @override
   Widget build(BuildContext context) {
     final repo = context.watch<SongRepository>();
-    final auth = context.watch<AuthService>();
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: lightGray1,
       body: SafeArea(
         child: Column(
           children: [
-            // Header Section
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Row(
                 children: [
-                  // Top row with bookmark icon and title (back button removed)
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.black87,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.bookmark,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Bookmarks',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            Text(
-                              'Your favorite songs',
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  // Search bar
                   Container(
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _isSearchFocused ? Colors.black87 : Colors.black12,
-                        width: _isSearchFocused ? 2 : 1,
-                      ),
+                      color: white,
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
+                          color: black.withOpacity(0.1),
+                          blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Focus(
-                      onFocusChange: (hasFocus) {
-                        setState(() {
-                          _isSearchFocused = hasFocus;
-                        });
-                      },
-                      child: TextField(
-                        controller: _searchController,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Search bookmarked songs...',
-                          hintStyle: const TextStyle(
-                            color: Colors.black38,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          prefixIcon: Container(
-                            padding: const EdgeInsets.all(12),
-                            child: const Icon(
-                              Icons.search,
-                              color: Colors.black54,
-                              size: 22,
-                            ),
-                          ),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                            icon: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.black87,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.clear,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                            },
-                          )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
+                    child: const Icon(Icons.bookmark, color: black, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bookmarks',
+                          style: TextStyle(
+                            color: black,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                      ),
+                        Text(
+                          'Your favorite songs',
+                          style: TextStyle(
+                            color: darkGray2,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            // Loading indicator
-            if (_isLoading)
-              const Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(Colors.black87),
-                          strokeWidth: 3,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: _isSearchFocused ? black : lightGray2,
+                    width: _isSearchFocused ? 2 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _isSearchFocused
+                          ? black.withOpacity(0.2)
+                          : black.withOpacity(0.1),
+                      blurRadius: _isSearchFocused ? 14 : 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Focus(
+                  onFocusChange: (hasFocus) {
+                    setState(() => _isSearchFocused = hasFocus);
+                  },
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(
+                      color: black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search bookmarked songs...',
+                      hintStyle: TextStyle(
+                        color: darkGray2.withOpacity(0.7),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      prefixIcon: Container(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.search,
+                          color: _isSearchFocused ? black : darkGray2,
+                          size: 22,
                         ),
                       ),
-                      SizedBox(height: 24),
-                      Text(
-                        'Loading bookmarks...',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: darkGray2,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.clear,
+                            color: white,
+                            size: 16,
+                          ),
                         ),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 18,
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            // Bookmarks List
+            ),
+            if (_isLoading)
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
             if (!_isLoading)
               Expanded(
                 child: StreamBuilder<List<Song>>(
@@ -314,306 +287,145 @@ class _BookmarkPageState extends State<BookmarkPage> {
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 40,
-                              height: 40,
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation(Colors.black87),
-                                strokeWidth: 3,
-                              ),
-                            ),
-                            SizedBox(height: 24),
-                            Text(
-                              'Loading songs...',
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
+                        child: CircularProgressIndicator(),
                       );
                     }
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.black87,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Icon(
-                                Icons.error_outline,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            const Text(
-                              'Something went wrong',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Please try again later',
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
+                      return const Center(
+                        child: Text('Something went wrong'),
                       );
                     }
                     final allSongs = snapshot.data ?? [];
-                    // Filter songs to only include bookmarked ones
-                    final bookmarkedSongs = allSongs.where((song) =>
-                        _bookmarkedSongIds.contains(song.id)).toList();
+                    final bookmarkedSongs = allSongs
+                        .where((song) => _bookmarkedSongIds.contains(song.id))
+                        .toList();
                     final filteredSongs = _filterSongs(bookmarkedSongs);
-
-                    if (_bookmarkedSongIds.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.black87,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Icon(
-                                Icons.bookmark_border,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            const Text(
-                              'No bookmarks yet',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Bookmark songs to see them here',
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
+                    if (filteredSongs.isEmpty) {
+                      return const Center(
+                        child: Text('No bookmarks found'),
                       );
                     }
-
-                    if (filteredSongs.isEmpty && _searchQuery.isNotEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.black87,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Icon(
-                                Icons.search_off,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            const Text(
-                              'No bookmarks found',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Try different keywords for "$_searchQuery"',
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 15,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return Column(
-                      children: [
-                        // Status bar
-                        Container(
-                          margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: filteredSongs.length,
+                      itemBuilder: (context, index) {
+                        final song = filteredSongs[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
-                            color: Colors.black87,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.bookmark,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _searchQuery.isNotEmpty
-                                    ? '${filteredSongs.length} of ${bookmarkedSongs.length} bookmarked songs'
-                                    : '${bookmarkedSongs.length} ${bookmarkedSongs.length == 1 ? 'bookmarked song' : 'bookmarked songs'}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            color: white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: lightGray2,
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                        ),
-                        // Songs list
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 20), // Add bottom padding for navbar
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              itemCount: filteredSongs.length,
-                              itemBuilder: (context, index) {
-                                final song = filteredSongs[index];
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.black12,
-                                      width: 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(16),
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          FadePageRoute(
-                                            builder: (_) => SongDetailPage(song: song),
-                                          ),
-                                        );
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(24),
-                                        child: Row(
-                                          children: [
-                                            // Bookmark icon
-                                            Container(
-                                              width: 48, // Reduced from 60 to 48
-                                              height: 48, // Reduced from 60 to 48
-                                              decoration: BoxDecoration(
-                                                color: Colors.black,
-                                                borderRadius: BorderRadius.circular(14), // Reduced from 18 to 14
-                                              ),
-                                              child: const Icon(
-                                                Icons.bookmark,
-                                                color: Colors.white,
-                                                size: 24, // Reduced from 30 to 24
-                                              ),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    song.title,
-                                                    style: const TextStyle(
-                                                      color: Colors.black,
-                                                      fontSize: 16,
-                                                      fontWeight: FontWeight.w600,
-                                                      letterSpacing: -0.3,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 3),
-                                                  const Text(
-                                                    'Tap to view chords',
-                                                    style: TextStyle(
-                                                      color: Colors.black54,
-                                                      fontSize: 13,
-                                                      fontWeight: FontWeight.w400,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            // Remove bookmark button
-                                            GestureDetector(
-                                              onTap: () => _showRemoveBookmarkDialog(song),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(7),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey.shade100,
-                                                  borderRadius: BorderRadius.circular(10),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.bookmark_remove,
-                                                  color: Colors.black54,
-                                                  size: 18,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black87,
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: const Icon(
-                                                Icons.chevron_right,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  FadePageRoute(
+                                    builder: (_) => SongDetailPage(song: song),
                                   ),
                                 );
                               },
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [darkGray2, black],
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.3),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      width: 48,
+                                      height: 48,
+                                      child: const Icon(Icons.bookmark,
+                                          color: white, size: 24),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            song.title,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: -0.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Tap to view chords',
+                                            style: TextStyle(
+                                              color: darkGray2,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () =>
+                                          _showRemoveBookmarkDialog(song),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(7),
+                                        decoration: BoxDecoration(
+                                          color: lightGray2,
+                                          borderRadius:
+                                          BorderRadius.circular(10),
+                                        ),
+                                        child: const Icon(
+                                          Icons.bookmark_remove,
+                                          color: darkGray2,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: black,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.chevron_right,
+                                        color: white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        );
+                      },
                     );
                   },
                 ),
@@ -621,7 +433,6 @@ class _BookmarkPageState extends State<BookmarkPage> {
           ],
         ),
       ),
-      // Bottom navigation bar
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentNavIndex,
         onTap: _onNavItemTapped,

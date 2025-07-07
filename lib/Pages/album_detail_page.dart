@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:lotn_chords_sheets/Pages/song_detail_page.dart';
 import 'package:provider/provider.dart';
 import '../Models/album.dart';
 import '../Models/songs.dart';
 import '../Services/album_repository.dart';
 import '../Services/song_repository.dart';
 import '../transition.dart';
+import 'song_detail_page.dart';
+
+// Define color palette
+class AppColors {
+  static const Color black = Color(0xFF000000);
+  static const Color darkGray1 = Color(0xFF1F1F1F);
+  static const Color darkGray2 = Color(0xFF242424);
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color lightGray1 = Color(0xFFF2F2F2);
+  static const Color lightGray2 = Color(0xFFE2E2E2);
+}
 
 class AlbumDetailPage extends StatefulWidget {
   final Album album;
+
   const AlbumDetailPage({super.key, required this.album});
 
   @override
@@ -21,25 +32,18 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   @override
   void initState() {
     super.initState();
-    // Make a local copy so we can update UI immediately
     _currentSongIds = List.from(widget.album.songIds);
   }
 
   Future<void> _removeSong(String songId) async {
     _currentSongIds.remove(songId);
-    await context.read<AlbumRepository>()
-        .updateAlbumSongs(widget.album.id, _currentSongIds);
+    await context.read<AlbumRepository>().updateAlbumSongs(widget.album.id, _currentSongIds);
     setState(() {});
   }
 
   Future<void> _showAddSongsDialog(List<Song> allSongs) async {
-    // Build a map of songId -> selected?
     final available = allSongs.where((s) => !_currentSongIds.contains(s.id)).toList();
-    final Map<String, bool> selected = {
-      for (var s in available) s.id: false
-    };
-
-    // For search functionality
+    final Map<String, bool> selected = {for (var s in available) s.id: false};
     String searchQuery = '';
     List<Song> filteredSongs = List.from(available);
 
@@ -78,7 +82,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Search Bar
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
@@ -101,8 +104,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Song Count
                   if (filteredSongs.isNotEmpty)
                     Align(
                       alignment: Alignment.centerLeft,
@@ -116,8 +117,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                       ),
                     ),
                   const SizedBox(height: 8),
-
-                  // Songs List
                   Expanded(
                     child: filteredSongs.isEmpty
                         ? Center(
@@ -131,9 +130,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            searchQuery.isEmpty
-                                ? 'No songs available to add'
-                                : 'No songs match your search',
+                            searchQuery.isEmpty ? 'No songs available to add' : 'No songs match your search',
                             style: TextStyle(
                               color: Colors.black54,
                               fontSize: 16,
@@ -150,14 +147,10 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
-                            color: selected[song.id] == true
-                                ? Colors.black
-                                : Colors.white,
+                            color: selected[song.id] == true ? Colors.black : Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: selected[song.id] == true
-                                  ? Colors.black
-                                  : Colors.black12,
+                              color: selected[song.id] == true ? Colors.black : Colors.black12,
                             ),
                             boxShadow: selected[song.id] == true
                                 ? [
@@ -176,17 +169,13 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: selected[song.id] == true
-                                    ? Colors.white
-                                    : Colors.black,
+                                color: selected[song.id] == true ? Colors.white : Colors.black,
                               ),
                             ),
                             subtitle: Text(
                               song.creator,
                               style: TextStyle(
-                                color: selected[song.id] == true
-                                    ? Colors.white70
-                                    : Colors.grey[600],
+                                color: selected[song.id] == true ? Colors.white70 : Colors.grey[600],
                                 fontSize: 14,
                               ),
                             ),
@@ -225,15 +214,10 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               ),
               GestureDetector(
                 onTap: () async {
-                  // Add all newly checked
-                  final toAdd = selected.entries
-                      .where((e) => e.value)
-                      .map((e) => e.key);
-
+                  final toAdd = selected.entries.where((e) => e.value).map((e) => e.key);
                   if (toAdd.isNotEmpty) {
                     _currentSongIds.addAll(toAdd);
-                    await context.read<AlbumRepository>()
-                        .updateAlbumSongs(widget.album.id, _currentSongIds);
+                    await context.read<AlbumRepository>().updateAlbumSongs(widget.album.id, _currentSongIds);
                     Navigator.pop(ctx);
                     setState(() {});
                   }
@@ -263,12 +247,12 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   @override
   Widget build(BuildContext context) {
     final songRepo = context.watch<SongRepository>();
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightGray1, // Set the background color to lightGray1
       body: SafeArea(
         child: Column(
           children: [
-            // — Header —
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
               child: Row(
@@ -278,7 +262,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
+                        color: AppColors.lightGray2,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.arrow_back_ios, size: 16, color: Colors.black87),
@@ -298,7 +282,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Add Song button
                   GestureDetector(
                     onTap: () async {
                       final allSongs = await songRepo.songsStream.first;
@@ -317,8 +300,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // — Song List —
             Expanded(
               child: StreamBuilder<List<Song>>(
                 stream: songRepo.songsStream,
@@ -327,16 +308,12 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final allSongs = snap.data ?? [];
-                  final inAlbum = allSongs
-                      .where((s) => _currentSongIds.contains(s.id))
-                      .toList();
-
+                  final inAlbum = allSongs.where((s) => _currentSongIds.contains(s.id)).toList();
                   if (inAlbum.isEmpty) {
                     return const Center(
                       child: Text('No songs here yet', style: TextStyle(color: Colors.black54)),
                     );
                   }
-
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: inAlbum.length,
@@ -370,8 +347,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                FadePageRoute(builder: (_) =>
-                                    SongDetailPage(song: song)
+                                FadePageRoute(
+                                  builder: (_) => SongDetailPage(song: song),
                                 ),
                               );
                             },
@@ -379,7 +356,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                               padding: const EdgeInsets.all(20),
                               child: Row(
                                 children: [
-                                  // Left side - Song info with icon
                                   Container(
                                     width: 48,
                                     height: 48,
@@ -394,8 +370,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                                     ),
                                   ),
                                   const SizedBox(width: 16),
-
-                                  // Song details
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,12 +398,9 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                                       ],
                                     ),
                                   ),
-
-                                  // Right side - Action buttons
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // Play/View indicator
                                       Container(
                                         width: 36,
                                         height: 36,
@@ -444,8 +415,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-
-                                      // Delete button
                                       GestureDetector(
                                         onTap: () => _removeSong(song.id),
                                         child: Container(
