@@ -22,12 +22,12 @@ class EditSongPage extends StatefulWidget {
 
 class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMixin {
   late final TextEditingController _title;
-  late final TextEditingController _lyrics;
   late final TextEditingController _creator;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
   final Map<String, TextEditingController> _chordSections = {};
+  final Map<String, TextEditingController> _lyricSections = {};
   final List<String> _sectionOrder = [];
 
   // Dropdown state variables
@@ -55,7 +55,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
   void initState() {
     super.initState();
     _title = TextEditingController(text: widget.song.title);
-    _lyrics = TextEditingController(text: widget.song.lyrics);
     _creator = TextEditingController(text: widget.song.creator);
 
     // Initialize dropdown values
@@ -71,12 +70,17 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
     );
     _animationController.forward();
 
+    // Initialize chord sections
     final chordsMap = widget.song.chords;
-    final order = widget.song.sectionOrder;
-
-    for (final section in order) {
+    for (final section in widget.song.sectionOrder) {
       _chordSections[section] = TextEditingController(text: chordsMap[section] ?? '');
       _sectionOrder.add(section);
+    }
+
+    // Initialize lyric sections
+    final lyricsMap = widget.song.lyrics;
+    for (final section in lyricsMap.keys) {
+      _lyricSections[section] = TextEditingController(text: lyricsMap[section] ?? '');
     }
   }
 
@@ -84,9 +88,11 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
   void dispose() {
     _animationController.dispose();
     _title.dispose();
-    _lyrics.dispose();
     _creator.dispose();
     for (final controller in _chordSections.values) {
+      controller.dispose();
+    }
+    for (final controller in _lyricSections.values) {
       controller.dispose();
     }
     super.dispose();
@@ -275,6 +281,187 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
     );
   }
 
+  void _addNewLyricSection() {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierColor: AppColors.black.withOpacity(0.8),
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withOpacity(0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Add New Lyric Section',
+                style: TextStyle(
+                  color: AppColors.black,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Choose from common sections:',
+                style: TextStyle(
+                  color: AppColors.darkGray1,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: AppColors.lightGray1,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.lightGray2),
+                ),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: predefinedSections.length,
+                  itemBuilder: (context, index) {
+                    final section = predefinedSections[index];
+                    final isAlreadyAdded = _lyricSections.containsKey(section);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: isAlreadyAdded
+                              ? null
+                              : () {
+                            setState(() {
+                              _lyricSections[section] = TextEditingController();
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isAlreadyAdded ? AppColors.lightGray2 : AppColors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isAlreadyAdded ? AppColors.lightGray2 : AppColors.lightGray1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    section,
+                                    style: TextStyle(
+                                      color: isAlreadyAdded ? AppColors.darkGray1.withOpacity(0.6) : AppColors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                if (isAlreadyAdded)
+                                  Icon(Icons.check_circle, color: AppColors.darkGray1.withOpacity(0.6), size: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Or create a custom section:',
+                style: TextStyle(
+                  color: AppColors.darkGray1,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.lightGray1,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.lightGray2),
+                ),
+                child: TextField(
+                  controller: controller,
+                  style: const TextStyle(
+                    color: AppColors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Custom section name',
+                    hintStyle: TextStyle(color: AppColors.darkGray1),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(20),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.darkGray1,
+                        backgroundColor: AppColors.lightGray1,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        final name = controller.text.trim();
+                        if (name.isNotEmpty && !_lyricSections.containsKey(name)) {
+                          setState(() {
+                            _lyricSections[name] = TextEditingController();
+                          });
+                        }
+                        Navigator.pop(context);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: AppColors.black,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Add Custom', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _removeSection(String section) {
     setState(() {
       _chordSections[section]?.dispose();
@@ -283,11 +470,10 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
     });
   }
 
-  void _reorderSections(int oldIndex, int newIndex) {
+  void _removeLyricSection(String section) {
     setState(() {
-      if (newIndex > oldIndex) newIndex--;
-      final item = _sectionOrder.removeAt(oldIndex);
-      _sectionOrder.insert(newIndex, item);
+      _lyricSections[section]?.dispose();
+      _lyricSections.remove(section);
     });
   }
 
@@ -444,116 +630,189 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                       ),
                       const SizedBox(height: 20),
 
-                      // Reorderable Chord Sections
-                      ReorderableListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _sectionOrder.length,
-                        onReorder: _reorderSections,
-                        itemBuilder: (context, index) {
-                          final section = _sectionOrder[index];
-                          final controller = _chordSections[section]!;
-
-                          return Container(
-                            key: ValueKey(section),
-                            margin: const EdgeInsets.only(bottom: 20),
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: AppColors.lightGray1,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.lightGray2),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    // Drag handle
-                                    Container(
-                                      width: 24,
-                                      height: 24,
+                      // Chord Section Cards
+                      ..._sectionOrder.map((section) {
+                        final controller = _chordSections[section]!;
+                        return Container(
+                          key: ValueKey(section),
+                          margin: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGray1,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.lightGray2),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    section,
+                                    style: const TextStyle(
+                                      color: AppColors.black,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => _removeSection(section),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
                                       decoration: BoxDecoration(
-                                        color: AppColors.lightGray2,
-                                        borderRadius: BorderRadius.circular(8),
+                                        color: AppColors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: AppColors.lightGray2),
                                       ),
                                       child: const Icon(
-                                        Icons.drag_handle,
+                                        Icons.close,
                                         color: AppColors.darkGray1,
-                                        size: 16,
+                                        size: 18,
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        section,
-                                        style: const TextStyle(
-                                          color: AppColors.black,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: -0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => _removeSection(section),
-                                      child: Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.white,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: AppColors.lightGray2),
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          color: AppColors.darkGray1,
-                                          size: 18,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: AppColors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppColors.lightGray2),
                                   ),
-                                  child: TextField(
-                                    controller: controller,
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 14,
-                                      color: AppColors.black,
-                                      height: 1.6,
-                                    ),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Enter chords...',
-                                      hintStyle: TextStyle(color: AppColors.darkGray1),
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.all(16),
-                                    ),
-                                    maxLines: null,
-                                    minLines: 3,
-                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.lightGray2),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                                child: TextField(
+                                  controller: controller,
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 14,
+                                    color: AppColors.black,
+                                    height: 1.6,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter chords...',
+                                    hintStyle: TextStyle(color: AppColors.darkGray1),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.all(16),
+                                  ),
+                                  maxLines: null,
+                                  minLines: 3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
 
-                      // Lyrics
-                      const SizedBox(height: 24),
-                      _buildSectionHeader('Lyrics'),
-                      const SizedBox(height: 12),
-                      _buildModernTextField(
-                        controller: _lyrics,
-                        hintText: 'Enter song lyrics...',
-                        maxLines: null,
-                        minLines: 8,
+                      // Lyric Sections
+                      const SizedBox(height: 40),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildSectionHeader('Lyric Sections'),
+                          GestureDetector(
+                            onTap: _addNewLyricSection,
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: AppColors.black,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.black.withOpacity(0.2),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                color: AppColors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 20),
+
+                      // Lyric Section Cards
+                      ..._lyricSections.keys.map((section) {
+                        final controller = _lyricSections[section]!;
+                        return Container(
+                          key: ValueKey(section),
+                          margin: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGray1,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.lightGray2),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    section,
+                                    style: const TextStyle(
+                                      color: AppColors.black,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => _removeLyricSection(section),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: AppColors.lightGray2),
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: AppColors.darkGray1,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.lightGray2),
+                                ),
+                                child: TextField(
+                                  controller: controller,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.black,
+                                    height: 1.6,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter lyrics...',
+                                    hintStyle: TextStyle(color: AppColors.darkGray1),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.all(16),
+                                  ),
+                                  maxLines: null,
+                                  minLines: 3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
 
                       // Update Button
                       const SizedBox(height: 40),
@@ -579,12 +838,18 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                                   section: _chordSections[section]!.text.trim(),
                             };
 
+                            final lyrics = {
+                              for (final section in _lyricSections.keys)
+                                if (_lyricSections[section]!.text.trim().isNotEmpty)
+                                  section: _lyricSections[section]!.text.trim(),
+                            };
+
                             final updated = Song(
                               id: widget.song.id,
                               title: _title.text.trim(),
                               chords: chords,
                               sectionOrder: _sectionOrder,
-                              lyrics: _lyrics.text.trim(),
+                              lyrics: lyrics,
                               creator: _creator.text.trim(),
                               language: _selectedLanguage,
                               type: _selectedType,

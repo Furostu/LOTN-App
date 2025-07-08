@@ -163,9 +163,14 @@ class _AlbumsPageState extends State<AlbumsPage> {
     try {
       final songRepo = context.read<SongRepository>();
       final albumRepo = context.read<AlbumRepository>();
-      final songs = await songRepo.getAllSongs();
-      final existingAlbums = await albumRepo.getAllAlbums();
 
+      // Get all songs
+      final songs = await songRepo.getAllSongs();
+
+      // Force refresh albums from server to ensure we have the latest data
+      final existingAlbums = await albumRepo.refreshAlbums();
+
+      // Group songs by creator
       final Map<String, List<Song>> creatorSongs = {};
       for (final song in songs) {
         final creator = song.creator?.trim() ?? 'Unknown';
@@ -174,46 +179,88 @@ class _AlbumsPageState extends State<AlbumsPage> {
         }
       }
 
+      // Filter creators with at least 2 songs
+      final validCreators = creatorSongs.entries
+          .where((entry) => entry.value.length >= 2)
+          .map((entry) => entry.key)
+          .toList();
+
+      if (validCreators.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('No creators with 2+ songs found'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Batch check for existing albums
+      final existingAlbumsMap = await albumRepo.getAlbumsByNames(validCreators);
+
       int albumsCreated = 0;
+      int albumsUpdated = 0;
+
       for (final entry in creatorSongs.entries) {
         final creator = entry.key;
         final creatorSongList = entry.value;
+
         if (creatorSongList.length >= 2) {
-          final existingAlbum = existingAlbums.firstWhere(
-                (album) => album.name.toLowerCase() == creator.toLowerCase(),
-            orElse: () => Album(id: '', name: '', songIds: []),
-          );
-          if (existingAlbum.id.isEmpty) {
+          final existingAlbum = existingAlbumsMap[creator];
+
+          if (existingAlbum == null) {
+            // Create new album
             final songIds = creatorSongList.map((song) => song.id).toList();
             await albumRepo.addAlbumWithSongs(creator, songIds);
             albumsCreated++;
+
+            print('Created album: $creator with ${songIds.length} songs');
           } else {
+            // Update existing album with new songs
+            final currentSongIds = existingAlbum.songIds;
             final newSongIds = creatorSongList
                 .map((song) => song.id)
-                .where((id) => !existingAlbum.songIds.contains(id))
+                .where((id) => !currentSongIds.contains(id))
                 .toList();
+
             if (newSongIds.isNotEmpty) {
               await albumRepo.addSongsToAlbum(existingAlbum.id, newSongIds);
+              albumsUpdated++;
+
+              print('Updated album: $creator with ${newSongIds.length} new songs');
             }
           }
         }
       }
 
       if (mounted) {
+        String message;
+        if (albumsCreated > 0 && albumsUpdated > 0) {
+          message = 'Created $albumsCreated new album${albumsCreated == 1 ? '' : 's'} and updated $albumsUpdated existing album${albumsUpdated == 1 ? '' : 's'}';
+        } else if (albumsCreated > 0) {
+          message = 'Created $albumsCreated new album${albumsCreated == 1 ? '' : 's'}';
+        } else if (albumsUpdated > 0) {
+          message = 'Updated $albumsUpdated existing album${albumsUpdated == 1 ? '' : 's'}';
+        } else {
+          message = 'All creator albums are up to date';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              albumsCreated > 0
-                  ? 'Created $albumsCreated creator album${albumsCreated == 1 ? '' : 's'}'
-                  : 'All creator albums are up to date',
-            ),
+            content: Text(message),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
+      print('Error in _generateArtistAlbums: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

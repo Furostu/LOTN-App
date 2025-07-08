@@ -19,6 +19,18 @@ class AlbumRepository {
     }
   }
 
+  // Force refresh albums from server (bypasses cache)
+  Future<List<Album>> refreshAlbums() async {
+    try {
+      final QuerySnapshot snapshot = await _col.get(const GetOptions(source: Source.server));
+      return snapshot.docs.map((doc) => Album.fromMap(doc.id, doc.data() as Map<String, dynamic>)).toList();
+    } catch (e) {
+      print('Error refreshing albums from server: $e');
+      // Fallback to cache if server fetch fails
+      return await getAllAlbums();
+    }
+  }
+
   // Create a new album with songs
   Future<void> addAlbumWithSongs(String name, List<String> songIds) async {
     try {
@@ -113,6 +125,62 @@ class AlbumRepository {
     } catch (e) {
       print('Error getting album by name: $e');
       return null;
+    }
+  }
+
+  // Enhanced method to check if album exists by name (case-insensitive)
+  Future<Album?> getAlbumByNameCaseInsensitive(String name) async {
+    try {
+      // First try exact match (more efficient)
+      final exactMatch = await getAlbumByName(name);
+      if (exactMatch != null) return exactMatch;
+
+      // If no exact match, get all albums and check case-insensitively
+      final allAlbums = await getAllAlbums();
+      final normalizedName = name.toLowerCase().trim();
+
+      for (final album in allAlbums) {
+        if (album.name.toLowerCase().trim() == normalizedName) {
+          return album;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error getting album by name (case-insensitive): $e');
+      return null;
+    }
+  }
+
+  // Check if album exists by name (returns boolean)
+  Future<bool> albumExistsByName(String name) async {
+    final album = await getAlbumByNameCaseInsensitive(name);
+    return album != null;
+  }
+
+  // Batch operation to check multiple album names at once
+  Future<Map<String, Album?>> getAlbumsByNames(List<String> names) async {
+    try {
+      final result = <String, Album?>{};
+      final allAlbums = await getAllAlbums();
+
+      for (final name in names) {
+        final normalizedName = name.toLowerCase().trim();
+        result[name] = allAlbums.firstWhere(
+              (album) => album.name.toLowerCase().trim() == normalizedName,
+          orElse: () => Album(id: '', name: '', songIds: []),
+        );
+
+        // If album has empty ID, it means it wasn't found
+        if (result[name]!.id.isEmpty) {
+          result[name] = null;
+        }
+      }
+
+      return result;
+    } catch (e) {
+      print('Error getting albums by names: $e');
+      return {};
     }
   }
 }

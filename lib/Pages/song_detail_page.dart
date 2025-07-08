@@ -47,6 +47,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
   // Transpose a single chord
   String _transposeChord(String chord) {
     if (_transposeSteps == 0) return chord;
+
     if (chord.contains('/')) {
       List<String> parts = chord.split('/');
       String mainChord = _transposeSingleChord(parts[0]);
@@ -57,35 +58,45 @@ class _SongDetailPageState extends State<SongDetailPage> {
   }
 
   String _transposeSingleChord(String chord) {
-    if (_transposeSteps == 0) return chord;
+    if (_transposeSteps == 0 || chord.isEmpty) return chord;
+
     String rootNote = '';
     String suffix = '';
+
+    // Extract root note and suffix
     if (chord.length >= 2 && (chord[1] == '#' || chord[1] == 'b')) {
       rootNote = chord.substring(0, 2);
       suffix = chord.substring(2);
-    } else if (chord.isNotEmpty) {
+    } else {
       rootNote = chord.substring(0, 1);
       suffix = chord.substring(1);
     }
+
+    // Debug print - remove after fixing
+    print('Original chord: "$chord", Root: "$rootNote", Suffix: "$suffix"');
+
+    // Convert flat notes to sharp equivalents
     if (_enharmonicEquivalents.containsKey(rootNote)) {
       rootNote = _enharmonicEquivalents[rootNote]!;
     }
+
+    // Find the index in chromatic scale
     int currentIndex = _chromaticScale.indexOf(rootNote);
-    if (currentIndex == -1) return chord;
+    print('Current index for "$rootNote": $currentIndex');
+
+    if (currentIndex == -1) {
+      print('Root note "$rootNote" not found in chromatic scale');
+      return chord; // Return original if not found
+    }
+
+    // Calculate new index with proper modulo handling
     int newIndex = (currentIndex + _transposeSteps) % 12;
     if (newIndex < 0) newIndex += 12;
-    return _chromaticScale[newIndex] + suffix;
-  }
 
-  String _transposeChordProgression(String chordProgression) {
-    if (_transposeSteps == 0) return chordProgression;
-    return chordProgression.replaceAllMapped(
-      RegExp(r'\b([A-G][#b]?(?:m|maj|dim|aug|sus|add|\d)*(?:\/[A-G][#b]?)?)\b'),
-          (Match match) {
-        String chord = match.group(1)!;
-        return _transposeChord(chord);
-      },
-    );
+    String result = _chromaticScale[newIndex] + suffix;
+    print('Transposed result: "$result"');
+
+    return result;
   }
 
   void _updateTranspose(int change) {
@@ -102,6 +113,27 @@ class _SongDetailPageState extends State<SongDetailPage> {
       transposed[key] = _transposeChordProgression(value);
     });
     return transposed;
+  }
+
+  String _transposeChordProgression(String chordProgression) {
+    if (_transposeSteps == 0) return chordProgression;
+
+    // Debug: Show what we're trying to transpose
+    print('Transposing chord progression: "$chordProgression"');
+
+    // Updated regex to better match chord patterns in your format
+    String result = chordProgression.replaceAllMapped(
+      RegExp(r'([A-G][#b]?(?:m|maj|dim|aug|sus|add|\d)*(?:\/[A-G][#b]?)?)'),
+          (Match match) {
+        String chord = match.group(1)!;
+        String transposed = _transposeChord(chord);
+        print('Matched and transposed: "$chord" -> "$transposed"');
+        return transposed;
+      },
+    );
+
+    print('Final result: "$result"');
+    return result;
   }
 
   @override
@@ -496,18 +528,97 @@ class _SongDetailPageState extends State<SongDetailPage> {
                             ),
                           ),
                     ] else ...[
-                      Container(
-                        child: Text(
-                          widget.song.lyrics,
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 16 * _fontScale,
-                            color: AppColors.black,
-                            height: 1.8,
-                            letterSpacing: 0.3,
+                      // Updated lyrics section with consistent design
+                      for (final section in widget.song.sectionOrder)
+                        if (widget.song.lyrics[section]?.trim().isNotEmpty ?? false)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 40),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      section.toUpperCase(),
+                                      style: TextStyle(
+                                        color: AppColors.black,
+                                        fontSize: 12 * _fontScale,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: AppColors.lightGray2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  widget.song.lyrics[section]!,
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 16 * _fontScale,
+                                    color: AppColors.black,
+                                    height: 1.8,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
+
+                      // Fallback: If no sections match sectionOrder, display all lyrics with consistent design
+                      if (widget.song.sectionOrder.isEmpty ||
+                          !widget.song.sectionOrder.any((section) =>
+                          widget.song.lyrics.containsKey(section) &&
+                              widget.song.lyrics[section]!.isNotEmpty))
+                        ...widget.song.lyrics.entries.map((entry) =>
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 40),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (entry.value.isNotEmpty) ...[
+                                    Row(
+                                      children: [
+                                        Text(
+                                          entry.key.toUpperCase(),
+                                          style: TextStyle(
+                                            color: AppColors.black,
+                                            fontSize: 12 * _fontScale,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 1.2,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Container(
+                                            height: 1,
+                                            color: AppColors.lightGray2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      entry.value,
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 16 * _fontScale,
+                                        color: AppColors.black,
+                                        height: 1.8,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                        ).toList(),
                     ],
                     const SizedBox(height: 60),
                   ],

@@ -18,7 +18,7 @@ class Song {
   final String id;
   final String title;
   final Map<String, String> chords;
-  final String lyrics;
+  final Map<String, String> lyrics; // Changed from String to Map<String, String>
   final List<String> sectionOrder;
   final String creator;
   final String language;
@@ -49,11 +49,22 @@ class Song {
         .toLowerCase() ??
         '';
 
+    // Handle lyrics - check if it's a Map or String for backward compatibility
+    Map<String, String> lyricsMap = {};
+    if (data['lyrics'] != null) {
+      if (data['lyrics'] is Map) {
+        lyricsMap = Map<String, String>.from(data['lyrics']);
+      } else if (data['lyrics'] is String) {
+        // For backward compatibility with existing songs that have lyrics as String
+        lyricsMap = {'main': data['lyrics']};
+      }
+    }
+
     return Song(
       id: doc.id,
       title: data['title'] ?? '',
       chords: Map<String, String>.from(data['chords'] ?? {}),
-      lyrics: data['lyrics'] ?? '',
+      lyrics: lyricsMap,
       sectionOrder: List<String>.from(
         data['sectionOrder'] ??
             (data['chords'] as Map<String, dynamic>?)?.keys.toList() ??
@@ -70,7 +81,7 @@ class Song {
     return {
       'title': title,
       'chords': chords,
-      'lyrics': lyrics,
+      'lyrics': lyrics, // Now saves as Map<String, String>
       'sectionOrder': sectionOrder,
       'creator': creator,
       'language': language,

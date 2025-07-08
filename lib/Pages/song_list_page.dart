@@ -1171,7 +1171,7 @@ class _SongListPageState extends State<SongListPage> {
                 ),
                 child: const Icon(
                   Icons.logout,
-                  color: white,
+                  color: darkGray2,
                   size: 20,
                 ),
               ),
@@ -1211,7 +1211,7 @@ class _SongListPageState extends State<SongListPage> {
                   Navigator.of(context).pop();
                 },
                 style: TextButton.styleFrom(
-                  foregroundColor: white,
+                  foregroundColor: darkGray2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
