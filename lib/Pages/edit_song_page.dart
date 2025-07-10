@@ -25,17 +25,14 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
   late final TextEditingController _creator;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
   final Map<String, TextEditingController> _chordSections = {};
   final Map<String, TextEditingController> _lyricSections = {};
   final List<String> _sectionOrder = [];
-
-  // Dropdown state variables
+  final List<String> _lyricsOrder = [];
   String _selectedLanguage = 'English';
   String _selectedType = 'Fast Song';
   final List<String> _languageOptions = ['English', 'Tagalog'];
   final List<String> _typeOptions = ['Fast Song', 'Slow Song'];
-
   final List<String> predefinedSections = [
     'Verse',
     'Verse 2',
@@ -56,10 +53,16 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
     super.initState();
     _title = TextEditingController(text: widget.song.title);
     _creator = TextEditingController(text: widget.song.creator);
+    _selectedLanguage = widget.song.language.isNotEmpty
+        ? widget.song.language[0].toUpperCase() + widget.song.language.substring(1).toLowerCase()
+        : 'English';
+    _selectedType = widget.song.type.isNotEmpty
+        ? widget.song.type == 'Fast Song' || widget.song.type == 'Slow Song'
+        ? widget.song.type
+        : 'Fast Song'
+        : 'Fast Song';
 
-    // Initialize dropdown values
-    _selectedLanguage = widget.song.language.isNotEmpty ? widget.song.language : 'English';
-    _selectedType = widget.song.type.isNotEmpty ? widget.song.type : 'Fast Song';
+    print('_selectedLanguage after init: $_selectedLanguage');
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 400),
@@ -70,18 +73,33 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
     );
     _animationController.forward();
 
-    // Initialize chord sections
+    // Populate chord sections and section order
     final chordsMap = widget.song.chords;
     for (final section in widget.song.sectionOrder) {
-      _chordSections[section] = TextEditingController(text: chordsMap[section] ?? '');
-      _sectionOrder.add(section);
+      if (!_chordSections.containsKey(section)) {
+        _chordSections[section] = TextEditingController(text: chordsMap[section] ?? '');
+        _sectionOrder.add(section);
+      }
     }
 
-    // Initialize lyric sections
+    // Define the desired order of the lyric sections
+    final desiredLyricsOrder = ['Verse', 'Verse 2', 'Bridge 2', 'Transition'];
     final lyricsMap = widget.song.lyrics;
+
+    // Populate _lyricSections and _lyricsOrder
     for (final section in lyricsMap.keys) {
-      _lyricSections[section] = TextEditingController(text: lyricsMap[section] ?? '');
+      if (!_lyricSections.containsKey(section)) {
+        _lyricSections[section] = TextEditingController(text: lyricsMap[section] ?? '');
+        if (!_lyricsOrder.contains(section)) {
+          _lyricsOrder.add(section);
+        }
+      }
     }
+
+    // Sort _lyricsOrder according to the desiredLyricsOrder
+    _lyricsOrder.sort((a, b) {
+      return desiredLyricsOrder.indexOf(a).compareTo(desiredLyricsOrder.indexOf(b));
+    });
   }
 
   @override
@@ -100,7 +118,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
 
   void _addNewSection() {
     final controller = TextEditingController();
-
     showDialog(
       context: context,
       barrierColor: AppColors.black.withOpacity(0.8),
@@ -155,8 +172,7 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                   itemCount: predefinedSections.length,
                   itemBuilder: (context, index) {
                     final section = predefinedSections[index];
-                    final isAlreadyAdded = _chordSections.containsKey(section);
-
+                    final isAlreadyAdded = _chordSections.containsKey(section) && _sectionOrder.contains(section);
                     return Container(
                       margin: const EdgeInsets.only(bottom: 4),
                       child: Material(
@@ -167,8 +183,17 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                               ? null
                               : () {
                             setState(() {
-                              _chordSections[section] = TextEditingController();
-                              _sectionOrder.add(section);
+                              if (!_sectionOrder.contains(section)) {
+                                _chordSections[section] = TextEditingController();
+                                _sectionOrder.add(section);
+                                if (!_lyricsOrder.contains(section)) {
+                                  _lyricsOrder.add(section);
+                                }
+                                // Initialize lyric controller if needed
+                                if (!_lyricSections.containsKey(section)) {
+                                  _lyricSections[section] = TextEditingController();
+                                }
+                              }
                             });
                             Navigator.pop(context);
                           },
@@ -255,10 +280,17 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                     child: TextButton(
                       onPressed: () {
                         final name = controller.text.trim();
-                        if (name.isNotEmpty && !_chordSections.containsKey(name)) {
+                        if (name.isNotEmpty && !_chordSections.containsKey(name) && !_sectionOrder.contains(name)) {
                           setState(() {
                             _chordSections[name] = TextEditingController();
                             _sectionOrder.add(name);
+                            if (!_lyricsOrder.contains(name)) {
+                              _lyricsOrder.add(name);
+                            }
+                            // Initialize lyric controller for new chord section
+                            if (!_lyricSections.containsKey(name)) {
+                              _lyricSections[name] = TextEditingController();
+                            }
                           });
                         }
                         Navigator.pop(context);
@@ -283,7 +315,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
 
   void _addNewLyricSection() {
     final controller = TextEditingController();
-
     showDialog(
       context: context,
       barrierColor: AppColors.black.withOpacity(0.8),
@@ -338,8 +369,7 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                   itemCount: predefinedSections.length,
                   itemBuilder: (context, index) {
                     final section = predefinedSections[index];
-                    final isAlreadyAdded = _lyricSections.containsKey(section);
-
+                    final isAlreadyAdded = _lyricSections.containsKey(section) && _lyricsOrder.contains(section);
                     return Container(
                       margin: const EdgeInsets.only(bottom: 4),
                       child: Material(
@@ -350,7 +380,26 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                               ? null
                               : () {
                             setState(() {
-                              _lyricSections[section] = TextEditingController();
+                              if (!_lyricsOrder.contains(section)) {
+                                _lyricSections[section] = TextEditingController();
+                                if (!_chordSections.containsKey(section)) {
+                                  _chordSections[section] = TextEditingController();
+                                  _sectionOrder.add(section);
+                                }
+                                _lyricsOrder.add(section);
+                                final desiredLyricsOrder = ['Verse', 'Verse 2', 'Bridge 2', 'Transition'];
+                                _lyricsOrder.sort((a, b) {
+                                  if (desiredLyricsOrder.contains(a) && desiredLyricsOrder.contains(b)) {
+                                    return desiredLyricsOrder.indexOf(a).compareTo(desiredLyricsOrder.indexOf(b));
+                                  } else if (desiredLyricsOrder.contains(a)) {
+                                    return -1;
+                                  } else if (desiredLyricsOrder.contains(b)) {
+                                    return 1;
+                                  } else {
+                                    return 0;
+                                  }
+                                });
+                              }
                             });
                             Navigator.pop(context);
                           },
@@ -437,9 +486,26 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                     child: TextButton(
                       onPressed: () {
                         final name = controller.text.trim();
-                        if (name.isNotEmpty && !_lyricSections.containsKey(name)) {
+                        if (name.isNotEmpty && !_lyricSections.containsKey(name) && !_lyricsOrder.contains(name)) {
                           setState(() {
                             _lyricSections[name] = TextEditingController();
+                            if (!_chordSections.containsKey(name)) {
+                              _chordSections[name] = TextEditingController();
+                              _sectionOrder.add(name);
+                            }
+                            _lyricsOrder.add(name);
+                            final desiredLyricsOrder = ['Verse', 'Verse 2', 'Bridge 2', 'Transition', name];
+                            _lyricsOrder.sort((a, b) {
+                              if (desiredLyricsOrder.contains(a) && desiredLyricsOrder.contains(b)) {
+                                return desiredLyricsOrder.indexOf(a).compareTo(desiredLyricsOrder.indexOf(b));
+                              } else if (desiredLyricsOrder.contains(a)) {
+                                return -1;
+                              } else if (desiredLyricsOrder.contains(b)) {
+                                return 1;
+                              } else {
+                                return 0;
+                              }
+                            });
                           });
                         }
                         Navigator.pop(context);
@@ -467,6 +533,7 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
       _chordSections[section]?.dispose();
       _chordSections.remove(section);
       _sectionOrder.remove(section);
+      _lyricsOrder.remove(section);
     });
   }
 
@@ -474,12 +541,15 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
     setState(() {
       _lyricSections[section]?.dispose();
       _lyricSections.remove(section);
+      _lyricsOrder.remove(section);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final repo = context.read<SongRepository>();
+
+    print('Building widget with _selectedLanguage: $_selectedLanguage');
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -488,7 +558,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
         child: SafeArea(
           child: Column(
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                 child: Row(
@@ -526,15 +595,12 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Content
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Song Title
                       _buildSectionHeader('Song Title'),
                       const SizedBox(height: 12),
                       _buildModernTextField(
@@ -542,8 +608,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                         hintText: 'Enter song title',
                         maxLines: 1,
                       ),
-
-                      // Creator
                       const SizedBox(height: 24),
                       _buildSectionHeader('Creator'),
                       const SizedBox(height: 12),
@@ -552,8 +616,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                         hintText: 'Enter creator name',
                         maxLines: 1,
                       ),
-
-                      // Language and Type Row
                       const SizedBox(height: 24),
                       Row(
                         children: [
@@ -596,8 +658,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                           ),
                         ],
                       ),
-
-                      // Chord Sections
                       const SizedBox(height: 40),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -629,12 +689,10 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                         ],
                       ),
                       const SizedBox(height: 20),
-
-                      // Chord Section Cards
                       ..._sectionOrder.map((section) {
                         final controller = _chordSections[section]!;
                         return Container(
-                          key: ValueKey(section),
+                          key: ValueKey('chord_$section'),
                           margin: const EdgeInsets.only(bottom: 20),
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
@@ -704,9 +762,7 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                             ],
                           ),
                         );
-                      }),
-
-                      // Lyric Sections
+                      }).toList(),
                       const SizedBox(height: 40),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -738,12 +794,10 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                         ],
                       ),
                       const SizedBox(height: 20),
-
-                      // Lyric Section Cards
-                      ..._lyricSections.keys.map((section) {
+                      ..._lyricsOrder.map((section) {
                         final controller = _lyricSections[section]!;
                         return Container(
-                          key: ValueKey(section),
+                          key: ValueKey('lyric_$section'),
                           margin: const EdgeInsets.only(bottom: 20),
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
@@ -812,10 +866,8 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                             ],
                           ),
                         );
-                      }),
-
-                      // Update Button
-                      const SizedBox(height: 40),
+                      }).toList(),
+                      const SizedBox(height: 20),
                       Container(
                         width: double.infinity,
                         height: 60,
@@ -824,41 +876,75 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.black.withOpacity(0.3),
+                              color: AppColors.black.withOpacity(0.2),
                               blurRadius: 30,
-                              offset: const Offset(0, 15),
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
                         child: TextButton(
                           onPressed: () async {
-                            final chords = {
-                              for (final section in _sectionOrder)
-                                if (_chordSections[section]!.text.trim().isNotEmpty)
-                                  section: _chordSections[section]!.text.trim(),
-                            };
+                            // Validate inputs
+                            if (_title.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a song title')),
+                              );
+                              return;
+                            }
+                            if (_creator.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a creator name')),
+                              );
+                              return;
+                            }
 
-                            final lyrics = {
-                              for (final section in _lyricSections.keys)
-                                if (_lyricSections[section]!.text.trim().isNotEmpty)
-                                  section: _lyricSections[section]!.text.trim(),
-                            };
+                            // Create maps for chords and lyrics
+                            final Map<String, String> chordsMap = {};
+                            for (final section in _chordSections.keys) {
+                              final content = _chordSections[section]!.text.trim();
+                              if (content.isNotEmpty) {
+                                chordsMap[section] = content;
+                              }
+                            }
 
-                            final updated = Song(
+                            final Map<String, String> lyricsMap = {};
+                            for (final section in _lyricSections.keys) {
+                              final content = _lyricSections[section]!.text.trim();
+                              if (content.isNotEmpty) {
+                                lyricsMap[section] = content;
+                              }
+                            }
+
+                            // Create updated song
+                            final updatedSong = Song(
                               id: widget.song.id,
                               title: _title.text.trim(),
-                              chords: chords,
-                              sectionOrder: _sectionOrder,
-                              lyrics: lyrics,
                               creator: _creator.text.trim(),
                               language: _selectedLanguage,
                               type: _selectedType,
+                              chords: chordsMap,
+                              lyrics: lyricsMap,
+                              sectionOrder: _sectionOrder,
+                              lyricsOrder: _lyricsOrder,
                             );
 
-                            await repo.updateSong(updated);
-                            if (context.mounted) Navigator.pop(context);
+                            // Update song in repository
+                            await repo.updateSong(updatedSong);
+
+                            // Show success message
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Song updated successfully!'),
+                                  backgroundColor: AppColors.black,
+                                ),
+                              );
+                              Navigator.pop(context);
+                            }
                           },
                           style: TextButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: AppColors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -866,7 +952,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
                           child: const Text(
                             'Update Song',
                             style: TextStyle(
-                              color: AppColors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.3,
@@ -892,8 +977,8 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
       style: const TextStyle(
         color: AppColors.black,
         fontSize: 20,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.4,
       ),
     );
   }
@@ -901,8 +986,7 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
   Widget _buildModernTextField({
     required TextEditingController controller,
     required String hintText,
-    int? maxLines,
-    int? minLines,
+    int maxLines = 1,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -913,9 +997,9 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
       child: TextField(
         controller: controller,
         style: const TextStyle(
-          fontSize: 16,
           color: AppColors.black,
-          height: 1.5,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
         ),
         decoration: InputDecoration(
           hintText: hintText,
@@ -924,7 +1008,6 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
           contentPadding: const EdgeInsets.all(20),
         ),
         maxLines: maxLines,
-        minLines: minLines,
       ),
     );
   }
@@ -932,34 +1015,41 @@ class _EditSongPageState extends State<EditSongPage> with TickerProviderStateMix
   Widget _buildDropdown({
     required String value,
     required List<String> options,
-    required Function(String?) onChanged,
+    required void Function(String?) onChanged,
   }) {
+    print('Building dropdown with value: $value and options: $options');
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.lightGray1,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.lightGray2),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          underline: Container(),
-          icon: const Icon(Icons.arrow_drop_down, color: AppColors.black),
-          style: const TextStyle(
-            color: AppColors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-          dropdownColor: AppColors.white,
-          items: options.map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: onChanged,
+      child: DropdownButtonFormField<String>(
+        value: value,
+        items: options.map((option) {
+          return DropdownMenuItem(
+            value: option,
+            child: Text(
+              option,
+              style: const TextStyle(
+                color: AppColors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.all(20),
+        ),
+        dropdownColor: AppColors.white,
+        style: const TextStyle(
+          color: AppColors.black,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

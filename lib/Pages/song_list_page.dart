@@ -257,35 +257,6 @@ class _SongListPageState extends State<SongListPage> {
                                 ],
                               ),
                             ),
-                          if (auth.isAdmin)
-                            PopupMenuItem<String>(
-                              value: 'delete_songs',
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: darkGray2,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.delete,
-                                      color: white,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Delete Songs',
-                                    style: TextStyle(
-                                      color: black,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                         ],
                         onSelected: (String value) {
                           switch (value) {
@@ -1243,7 +1214,7 @@ class _SongListPageState extends State<SongListPage> {
                 ),
                 child: const Icon(
                   Icons.delete,
-                  color: white,
+                  color: darkGray1,
                   size: 20,
                 ),
               ),
@@ -1286,7 +1257,7 @@ class _SongListPageState extends State<SongListPage> {
                   _toggleSelectionMode();
                 },
                 style: TextButton.styleFrom(
-                  foregroundColor: white,
+                  foregroundColor: darkGray1,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

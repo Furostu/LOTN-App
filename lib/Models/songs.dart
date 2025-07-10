@@ -20,6 +20,7 @@ class Song {
   final Map<String, String> chords;
   final Map<String, String> lyrics; // Changed from String to Map<String, String>
   final List<String> sectionOrder;
+  final List<String> lyricsOrder;
   final String creator;
   final String language;
   final String type;
@@ -30,6 +31,7 @@ class Song {
     required this.chords,
     required this.lyrics,
     required this.sectionOrder,
+    required this.lyricsOrder,
     required this.creator,
     required this.language,
     required this.type,
@@ -60,6 +62,12 @@ class Song {
       }
     }
 
+    // Handle lyricsOrder - default to empty list if missing
+    List<String> lyricsOrder = [];
+    if (data['lyricsOrder'] != null) {
+      lyricsOrder = List<String>.from(data['lyricsOrder']);
+    }
+
     return Song(
       id: doc.id,
       title: data['title'] ?? '',
@@ -70,6 +78,7 @@ class Song {
             (data['chords'] as Map<String, dynamic>?)?.keys.toList() ??
             [],
       ),
+      lyricsOrder: lyricsOrder,
       creator: data['creator'] ?? '',
       language: rawLang,
       type: rawType,
@@ -82,6 +91,7 @@ class Song {
       'title': title,
       'chords': chords,
       'lyrics': lyrics, // Now saves as Map<String, String>
+      'lyricsOrder': lyricsOrder,
       'sectionOrder': sectionOrder,
       'creator': creator,
       'language': language,

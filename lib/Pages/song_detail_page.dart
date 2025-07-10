@@ -529,7 +529,8 @@ class _SongDetailPageState extends State<SongDetailPage> {
                           ),
                     ] else ...[
                       // Updated lyrics section with consistent design
-                      for (final section in widget.song.sectionOrder)
+                      // --- LYRICS: use lyricsOrder from the DB instead of sectionOrder ---
+                      for (final section in widget.song.lyricsOrder)
                         if (widget.song.lyrics[section]?.trim().isNotEmpty ?? false)
                           Container(
                             margin: const EdgeInsets.only(bottom: 40),
@@ -570,6 +571,54 @@ class _SongDetailPageState extends State<SongDetailPage> {
                               ],
                             ),
                           ),
+                      if (widget.song.lyricsOrder.isEmpty ||
+                          !widget.song.lyricsOrder.any((section) =>
+                          widget.song.lyrics.containsKey(section) &&
+                              widget.song.lyrics[section]!.isNotEmpty))
+                        ...widget.song.lyrics.entries.map((entry) =>
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 40),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (entry.value.isNotEmpty) ...[
+                                    Row(
+                                      children: [
+                                        Text(
+                                          entry.key.toUpperCase(),
+                                          style: TextStyle(
+                                            color: AppColors.black,
+                                            fontSize: 12 * _fontScale,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 1.2,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Container(
+                                            height: 1,
+                                            color: AppColors.lightGray2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      entry.value,
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 16 * _fontScale,
+                                        color: AppColors.black,
+                                        height: 1.8,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                        ).toList(),
+
 
                       // Fallback: If no sections match sectionOrder, display all lyrics with consistent design
                       if (widget.song.sectionOrder.isEmpty ||
