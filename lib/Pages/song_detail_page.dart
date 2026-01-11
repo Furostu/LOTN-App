@@ -18,8 +18,15 @@ class AppColors {
 
 class SongDetailPage extends StatefulWidget {
   final Song song;
+  final List<Song>? songList; // Optional: list of songs for swipe navigation
+  final int? initialIndex; // Optional: initial index in songList
 
-  const SongDetailPage({super.key, required this.song});
+  const SongDetailPage({
+    super.key,
+    required this.song,
+    this.songList,
+    this.initialIndex,
+  });
 
   @override
   State<SongDetailPage> createState() => _SongDetailPageState();
@@ -30,6 +37,9 @@ class _SongDetailPageState extends State<SongDetailPage> {
   double _fontScale = 1.0;
   int _transposeSteps = 0;
   bool _isBookmarked = false;
+  late PageController _pageController;
+  late int _currentIndex;
+  late Song _currentSong;
 
   // Chord mapping for transposition
   static const List<String> _chromaticScale = [
@@ -44,21 +54,52 @@ class _SongDetailPageState extends State<SongDetailPage> {
     'Bb': 'A#'
   };
 
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize current song
+    _currentSong = widget.song;
+
+    // Initialize page controller if we have a list of songs
+    if (widget.songList != null && widget.songList!.isNotEmpty) {
+      _currentIndex = widget.initialIndex ?? _findSongIndex(widget.song);
+      _pageController = PageController(initialPage: _currentIndex);
+    } else {
+      _currentIndex = 0;
+      _pageController = PageController();
+    }
+
+    _loadTransposeSettings();
+    _loadBookmarkStatus();
+  }
+
+  int _findSongIndex(Song song) {
+    if (widget.songList == null) return 0;
+    return widget.songList!.indexWhere((s) => s.id == song.id);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   // Transpose a single chord
-  String _transposeChord(String chord) {
-    if (_transposeSteps == 0) return chord;
+  String _transposeChord(String chord, int transposeSteps) {
+    if (transposeSteps == 0) return chord;
 
     if (chord.contains('/')) {
       List<String> parts = chord.split('/');
-      String mainChord = _transposeSingleChord(parts[0]);
-      String bassChord = _transposeSingleChord(parts[1]);
+      String mainChord = _transposeSingleChord(parts[0], transposeSteps);
+      String bassChord = _transposeSingleChord(parts[1], transposeSteps);
       return '$mainChord/$bassChord';
     }
-    return _transposeSingleChord(chord);
+    return _transposeSingleChord(chord, transposeSteps);
   }
 
-  String _transposeSingleChord(String chord) {
-    if (_transposeSteps == 0 || chord.isEmpty) return chord;
+  String _transposeSingleChord(String chord, int transposeSteps) {
+    if (transposeSteps == 0 || chord.isEmpty) return chord;
 
     String rootNote = '';
     String suffix = '';
@@ -72,9 +113,6 @@ class _SongDetailPageState extends State<SongDetailPage> {
       suffix = chord.substring(1);
     }
 
-    // Debug print - remove after fixing
-    print('Original chord: "$chord", Root: "$rootNote", Suffix: "$suffix"');
-
     // Convert flat notes to sharp equivalents
     if (_enharmonicEquivalents.containsKey(rootNote)) {
       rootNote = _enharmonicEquivalents[rootNote]!;
@@ -82,71 +120,51 @@ class _SongDetailPageState extends State<SongDetailPage> {
 
     // Find the index in chromatic scale
     int currentIndex = _chromaticScale.indexOf(rootNote);
-    print('Current index for "$rootNote": $currentIndex');
 
     if (currentIndex == -1) {
-      print('Root note "$rootNote" not found in chromatic scale');
       return chord; // Return original if not found
     }
 
     // Calculate new index with proper modulo handling
-    int newIndex = (currentIndex + _transposeSteps) % 12;
+    int newIndex = (currentIndex + transposeSteps) % 12;
     if (newIndex < 0) newIndex += 12;
 
-    String result = _chromaticScale[newIndex] + suffix;
-    print('Transposed result: "$result"');
-
-    return result;
+    return _chromaticScale[newIndex] + suffix;
   }
 
   void _updateTranspose(int change) {
     setState(() {
       _transposeSteps += change;
     });
-    _saveTransposeSettings();
+    _saveTransposeSettings(_currentSong);
   }
 
-  Map<String, String> get _transposedChords {
-    if (_transposeSteps == 0) return widget.song.chords;
+  Map<String, String> _getTransposedChords(Song song, int transposeSteps) {
+    if (transposeSteps == 0) return song.chords;
     Map<String, String> transposed = {};
-    widget.song.chords.forEach((key, value) {
-      transposed[key] = _transposeChordProgression(value);
+    song.chords.forEach((key, value) {
+      transposed[key] = _transposeChordProgression(value, transposeSteps);
     });
     return transposed;
   }
 
-  String _transposeChordProgression(String chordProgression) {
-    if (_transposeSteps == 0) return chordProgression;
-
-    // Debug: Show what we're trying to transpose
-    print('Transposing chord progression: "$chordProgression"');
+  String _transposeChordProgression(String chordProgression, int transposeSteps) {
+    if (transposeSteps == 0) return chordProgression;
 
     // Updated regex to better match chord patterns in your format
-    String result = chordProgression.replaceAllMapped(
+    return chordProgression.replaceAllMapped(
       RegExp(r'([A-G][#b]?(?:m|maj|dim|aug|sus|add|\d)*(?:\/[A-G][#b]?)?)'),
           (Match match) {
         String chord = match.group(1)!;
-        String transposed = _transposeChord(chord);
-        print('Matched and transposed: "$chord" -> "$transposed"');
-        return transposed;
+        return _transposeChord(chord, transposeSteps);
       },
     );
-
-    print('Final result: "$result"');
-    return result;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTransposeSettings();
-    _loadBookmarkStatus();
   }
 
   Future<void> _loadTransposeSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedTranspose = prefs.getInt('transpose_${widget.song.id}') ?? 0;
+      final savedTranspose = prefs.getInt('transpose_${_currentSong.id}') ?? 0;
       setState(() {
         _transposeSteps = savedTranspose;
       });
@@ -155,10 +173,10 @@ class _SongDetailPageState extends State<SongDetailPage> {
     }
   }
 
-  Future<void> _saveTransposeSettings() async {
+  Future<void> _saveTransposeSettings(Song song) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('transpose_${widget.song.id}', _transposeSteps);
+      await prefs.setInt('transpose_${song.id}', _transposeSteps);
     } catch (e) {
       print('Error saving transpose settings: $e');
     }
@@ -169,7 +187,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
       final prefs = await SharedPreferences.getInstance();
       final bookmarkedSongs = prefs.getStringList('bookmarked_songs') ?? [];
       setState(() {
-        _isBookmarked = bookmarkedSongs.contains(widget.song.id);
+        _isBookmarked = bookmarkedSongs.contains(_currentSong.id);
       });
     } catch (e) {
       print('Error loading bookmark status: $e');
@@ -181,7 +199,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
       final prefs = await SharedPreferences.getInstance();
       List<String> bookmarkedSongs = prefs.getStringList('bookmarked_songs') ?? [];
       if (_isBookmarked) {
-        bookmarkedSongs.remove(widget.song.id);
+        bookmarkedSongs.remove(_currentSong.id);
         setState(() {
           _isBookmarked = false;
         });
@@ -193,7 +211,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
           ),
         );
       } else {
-        bookmarkedSongs.add(widget.song.id);
+        bookmarkedSongs.add(_currentSong.id);
         setState(() {
           _isBookmarked = true;
         });
@@ -211,10 +229,149 @@ class _SongDetailPageState extends State<SongDetailPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isAdmin = context.watch<AuthService>().isAdmin;
+  Widget _buildSongDetailContent(Song song) {
+    final transposedChords = _getTransposedChords(song, _transposeSteps);
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_showChords) ...[
+          for (final section in song.sectionOrder)
+            if (song.chords[section]?.trim().isNotEmpty ?? false)
+              Container(
+                margin: const EdgeInsets.only(bottom: 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          section.toUpperCase(),
+                          style: TextStyle(
+                            color: AppColors.black,
+                            fontSize: 12 * _fontScale,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: AppColors.lightGray2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      transposedChords[section]!,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 16 * _fontScale,
+                        color: AppColors.black,
+                        height: 1.8,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+        ] else ...[
+          // Updated lyrics section with consistent design
+          for (final section in song.lyricsOrder)
+            if (song.lyrics[section]?.trim().isNotEmpty ?? false)
+              Container(
+                margin: const EdgeInsets.only(bottom: 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          section.toUpperCase(),
+                          style: TextStyle(
+                            color: AppColors.black,
+                            fontSize: 12 * _fontScale,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: AppColors.lightGray2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      song.lyrics[section]!,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 16 * _fontScale,
+                        color: AppColors.black,
+                        height: 1.8,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          if (song.lyricsOrder.isEmpty ||
+              !song.lyricsOrder.any((section) =>
+              song.lyrics.containsKey(section) &&
+                  song.lyrics[section]!.isNotEmpty))
+            ...song.lyrics.entries.map((entry) => Container(
+              margin: const EdgeInsets.only(bottom: 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (entry.value.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Text(
+                          entry.key.toUpperCase(),
+                          style: TextStyle(
+                            color: AppColors.black,
+                            fontSize: 12 * _fontScale,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            height: 1,
+                            color: AppColors.lightGray2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      entry.value,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 16 * _fontScale,
+                        color: AppColors.black,
+                        height: 1.8,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            )).toList(),
+        ],
+        const SizedBox(height: 60),
+      ],
+    );
+  }
+
+  Widget _buildSongDetailPage(Song song) {
     return Scaffold(
       backgroundColor: AppColors.lightGray1,
       body: SafeArea(
@@ -222,7 +379,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
           children: [
             // Header with back button and controls
             Container(
-              color: AppColors.lightGray1, // Match the background color
+              color: AppColors.lightGray1,
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
@@ -244,7 +401,7 @@ class _SongDetailPageState extends State<SongDetailPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      '${widget.song.title} – ${widget.song.creator}',
+                      '${song.title} – ${song.creator}',
                       style: const TextStyle(
                         color: AppColors.black,
                         fontSize: 22,
@@ -311,13 +468,15 @@ class _SongDetailPageState extends State<SongDetailPage> {
                           ),
                         ),
                       ),
-                      if (isAdmin) ...[
+                      if (context.read<AuthService>().isAdmin) ...[
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () {
                             Navigator.push(
                               context,
-                              FadePageRoute(builder: (_) => EditSongPage(song: widget.song)),
+                              FadePageRoute(
+                                builder: (_) => EditSongPage(song: song),
+                              ),
                             );
                           },
                           child: Container(
@@ -482,201 +641,45 @@ class _SongDetailPageState extends State<SongDetailPage> {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_showChords) ...[
-                      for (final section in widget.song.sectionOrder)
-                        if (widget.song.chords[section]?.trim().isNotEmpty ?? false)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 40),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      section.toUpperCase(),
-                                      style: TextStyle(
-                                        color: AppColors.black,
-                                        fontSize: 12 * _fontScale,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Container(
-                                        height: 1,
-                                        color: AppColors.lightGray2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  _transposedChords[section]!,
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 16 * _fontScale,
-                                    color: AppColors.black,
-                                    height: 1.8,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                    ] else ...[
-                      // Updated lyrics section with consistent design
-                      // --- LYRICS: use lyricsOrder from the DB instead of sectionOrder ---
-                      for (final section in widget.song.lyricsOrder)
-                        if (widget.song.lyrics[section]?.trim().isNotEmpty ?? false)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 40),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      section.toUpperCase(),
-                                      style: TextStyle(
-                                        color: AppColors.black,
-                                        fontSize: 12 * _fontScale,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Container(
-                                        height: 1,
-                                        color: AppColors.lightGray2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  widget.song.lyrics[section]!,
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 16 * _fontScale,
-                                    color: AppColors.black,
-                                    height: 1.8,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      if (widget.song.lyricsOrder.isEmpty ||
-                          !widget.song.lyricsOrder.any((section) =>
-                          widget.song.lyrics.containsKey(section) &&
-                              widget.song.lyrics[section]!.isNotEmpty))
-                        ...widget.song.lyrics.entries.map((entry) =>
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 40),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (entry.value.isNotEmpty) ...[
-                                    Row(
-                                      children: [
-                                        Text(
-                                          entry.key.toUpperCase(),
-                                          style: TextStyle(
-                                            color: AppColors.black,
-                                            fontSize: 12 * _fontScale,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 1.2,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Container(
-                                            height: 1,
-                                            color: AppColors.lightGray2,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      entry.value,
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 16 * _fontScale,
-                                        color: AppColors.black,
-                                        height: 1.8,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                        ).toList(),
-
-
-                      // Fallback: If no sections match sectionOrder, display all lyrics with consistent design
-                      if (widget.song.sectionOrder.isEmpty ||
-                          !widget.song.sectionOrder.any((section) =>
-                          widget.song.lyrics.containsKey(section) &&
-                              widget.song.lyrics[section]!.isNotEmpty))
-                        ...widget.song.lyrics.entries.map((entry) =>
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 40),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (entry.value.isNotEmpty) ...[
-                                    Row(
-                                      children: [
-                                        Text(
-                                          entry.key.toUpperCase(),
-                                          style: TextStyle(
-                                            color: AppColors.black,
-                                            fontSize: 12 * _fontScale,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 1.2,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Container(
-                                            height: 1,
-                                            color: AppColors.lightGray2,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      entry.value,
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 16 * _fontScale,
-                                        color: AppColors.black,
-                                        height: 1.8,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                        ).toList(),
-                    ],
-                    const SizedBox(height: 60),
-                  ],
-                ),
+                child: _buildSongDetailContent(song),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // If we have a list of songs for swipe navigation, use PageView
+    if (widget.songList != null && widget.songList!.length > 1) {
+      return PageView.builder(
+        controller: _pageController,
+        itemCount: widget.songList!.length,
+        onPageChanged: (index) async {
+          final newSong = widget.songList![index];
+          setState(() {
+            _currentIndex = index;
+            _currentSong = newSong;
+            // Reset state for new song
+            _fontScale = 1.0;
+            _transposeSteps = 0;
+            _showChords = true;
+          });
+
+          // Load settings for the new song
+          await _loadTransposeSettings();
+          await _loadBookmarkStatus();
+        },
+        itemBuilder: (context, index) {
+          final song = widget.songList![index];
+          return _buildSongDetailPage(song);
+        },
+      );
+    }
+
+    // Otherwise, just show the single song
+    return _buildSongDetailPage(widget.song);
   }
 }

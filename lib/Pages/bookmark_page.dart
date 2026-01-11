@@ -331,11 +331,16 @@ class _BookmarkPageState extends State<BookmarkPage> {
                             color: Colors.transparent,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
+                              // In the ListView.builder itemBuilder where you navigate to SongDetailPage
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   FadePageRoute(
-                                    builder: (_) => SongDetailPage(song: song),
+                                    builder: (_) => SongDetailPage(
+                                      song: song,
+                                      songList: filteredSongs, // Pass the filtered list
+                                      initialIndex: index, // Pass the current index
+                                    ),
                                   ),
                                 );
                               },
